@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Processing - Anonymize Me{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-lg mx-auto text-center">
+    <div class="bg-[#1a1a1a] rounded-2xl p-12 shadow-2xl">
+        
+        <!-- Loading Spinner -->
+        <div class="mb-8">
+            <div class="spinner mx-auto mb-6"></div>
+            <h2 class="text-2xl font-bold mb-3">Processing Your Document</h2>
+            <p class="text-gray-400">
+                Analyzing and anonymizing sensitive information...
+            </p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="space-y-4 mb-8">
+            <div id="step1" class="flex items-center justify-between p-3 bg-[#0d0d0d] rounded-xl">
+                <span class="text-sm">📄 Document received</span>
+                <span class="text-green-500">✓</span>
+            </div>
+            <div id="step2" class="flex items-center justify-between p-3 bg-[#0d0d0d] rounded-xl">
+                <span class="text-sm">🔍 Detecting sensitive data</span>
+                <div class="w-4 h-4 border-2 border-gray-600 border-t-white rounded-full animate-spin"></div>
+            </div>
+            <div id="step3" class="flex items-center justify-between p-3 bg-[#0d0d0d] rounded-xl opacity-50">
+                <span class="text-sm">🔒 Anonymizing content</span>
+                <span class="text-gray-500">⏳</span>
+            </div>
+            <div id="step4" class="flex items-center justify-between p-3 bg-[#0d0d0d] rounded-xl opacity-50">
+                <span class="text-sm">✨ Finalizing document</span>
+                <span class="text-gray-500">⏳</span>
+            </div>
+        </div>
+
+        <!-- Processing Info -->
+        <div class="text-left bg-[#0d0d0d] rounded-xl p-4">
+            <h3 class="font-semibold mb-2 text-center">What we're doing:</h3>
+            <ul class="text-sm text-gray-400 space-y-1">
+                <li>• Scanning for personal information</li>
+                <li>• Identifying patterns and entities</li>
+                <li>• Replacing with anonymous alternatives</li>
+                <li>• Preserving document structure</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Cancel Button -->
+    <div class="mt-6">
+        <a href="/" class="text-gray-400 hover:text-white transition-colors text-sm">
+            ← Back to home
+        </a>
+    </div>
+</div>
+
+<script>
+// Simulate processing steps
+document.addEventListener('DOMContentLoaded', function() {
+    const steps = [
+        { id: 'step2', delay: 2000 },
+        { id: 'step3', delay: 4000 },
+        { id: 'step4', delay: 6000 }
+    ];
+    
+    steps.forEach((step, index) => {
+        setTimeout(() => {
+            const stepElement = document.getElementById(step.id);
+            const nextStep = steps[index + 1];
+            
+            // Complete current step
+            stepElement.classList.remove('opacity-50');
+            stepElement.querySelector('.animate-spin')?.remove();
+            stepElement.querySelector('span:last-child').innerHTML = '<span class="text-green-500">✓</span>';
+            
+            // Start next step if exists
+            if (nextStep) {
+                const nextElement = document.getElementById(nextStep.id);
+                nextElement.classList.remove('opacity-50');
+                nextElement.querySelector('span:last-child').innerHTML = '<div class="w-4 h-4 border-2 border-gray-600 border-t-white rounded-full animate-spin"></div>';
+            } else {
+                // All steps complete, redirect to results
+                setTimeout(() => {
+                    window.location.href = '/result';
+                }, 1000);
+            }
+        }, step.delay);
+    });
+});
+</script>
+{% endblock %}

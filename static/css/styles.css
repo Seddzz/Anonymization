@@ -1,0 +1,182 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base Styles - Minimal to let Tailwind handle most styling */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0d0d0d;
+  color: #f0f0f0;
+}
+
+/* Custom Font Class */
+.pixelated-text {
+  font-family: 'Pixelify Sans', sans-serif;
+  letter-spacing: -2px;
+}
+
+/* Typewriter cursor animation */
+.typewriter-cursor {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #4a4a4a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #666;
+}
+
+/* File Upload Drag & Drop Styles */
+.dropzone {
+  transition: all 0.3s ease;
+}
+
+.dropzone.dragover {
+  background-color: #1a1a1a !important;
+  border-color: #ffffff !important;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+.dropzone.dragover .w-16 {
+  background-color: #ffffff !important;
+}
+
+.dropzone.dragover svg {
+  color: #000000 !important;
+}
+
+.dropzone.dragover p {
+  color: #ffffff !important;
+}
+
+.file-selected {
+  background-color: #1a1a1a !important;
+  border-color: #ffffff !important;
+}
+
+.file-selected .w-16 {
+  background-color: #ffffff !important;
+}
+
+.file-selected svg {
+  color: #000000 !important;
+}
+
+.file-selected p {
+  color: #ffffff !important;
+}
+
+/* Loading Animation */
+.spinner {
+  border: 4px solid rgba(240, 240, 240, 0.1);
+  border-top: 4px solid #f0f0f0;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* File Drop Zone */
+.dropzone {
+  transition: all 0.3s ease;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Smooth transitions for interactive elements */
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Modern textarea styling */
+#textInput {
+  transition: height 0.2s ease;
+  line-height: 1.5;
+}
+
+#textInput::-webkit-scrollbar {
+  width: 4px;
+}
+
+#textInput::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#textInput::-webkit-scrollbar-thumb {
+  background-color: #4a4a4a;
+  border-radius: 2px;
+}
+
+/* Simple white button effects */
+.simple-hover {
+  background: white;
+  color: black;
+  border: 1px solid white;
+  transition: all 0.3s ease;
+}
+
+.simple-hover:hover {
+  background: black;
+  color: white;
+  border-color: white;
+}
+
+/* GitHub button styling */
+.github-btn {
+  background: white;
+  color: black;
+  border: 1px solid white;
+  transition: all 0.3s ease;
+}
+
+.github-btn:hover {
+  background: black;
+  color: white;
+  border-color: white;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+input:focus,
+textarea:focus {
+  outline: 2px solid #f0f0f0;
+  outline-offset: 2px;
+}

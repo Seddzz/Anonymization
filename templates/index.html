@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Anonymize Me - Secure Document Anonymization{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-2xl mx-auto text-center mt-24">
+    <!-- Logo and Title Section -->
+    <div class="mb-12">
+        <img src="{{ url_for('static', filename='assets/logo.png') }}" 
+             alt="Anonymization Logo" 
+             class="mx-auto max-w-72 max-h-72 w-auto h-auto mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold pixelated-text mb-3 min-h-[6rem] max-w-lg mx-auto leading-tight">
+            <span id="typewriter">Privacy is not something you have to hide...</span>
+        </h1>
+    </div>
+
+    <!-- Main Card -->
+    <div class="rounded-2xl p-6">
+        
+        <!-- Modern Text Input Section -->
+        <div class="mb-6">
+            <form id="textForm" action="/anonymize" method="POST" class="space-y-4">
+                <input type="hidden" name="detector" id="textDetector" value="spacy">
+                
+                <div class="relative bg-[#1a1a1a] rounded-2xl p-4 flex items-center gap-3 shadow-lg">
+                    <textarea 
+                        name="text"
+                        id="textInput"
+                        placeholder="Enter text to anonymize..."
+                        class="flex-1 bg-transparent text-gray-200 placeholder-gray-400 resize-none focus:outline-none min-h-[24px] max-h-[200px] overflow-y-auto"
+                        rows="1"
+                        style="field-sizing: content;">{{ request.form.text if request.form.text }}</textarea>
+                    <button 
+                        type="submit"
+                        class="flex-shrink-0 bg-white text-black p-2 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        id="textSubmitBtn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- File Upload Section -->
+        <div>
+            <form id="fileForm" action="/anonymize" method="POST" enctype="multipart/form-data">
+                
+                <div 
+                    id="dropzone"
+                    class="dropzone bg-[#1a1a1a] rounded-xl p-8 text-center cursor-pointer shadow-lg border-2 border-dashed border-gray-600 hover:border-gray-500 transition-all duration-300">
+                    <div id="dropzoneContent">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </div>
+                        <p class="text-xl font-semibold mb-2 text-white">Drop your file here</p>
+                        <p class="text-gray-400 mb-4">or click to browse</p>
+                        <div class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-lg text-sm text-gray-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            TXT, DOCX, PDF • Max 10MB
+                        </div>
+                    </div>
+                </div>
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    name="file" 
+                    accept=".txt,.docx,.pdf" 
+                    class="hidden">
+                <button 
+                    type="submit"
+                    id="uploadBtn"
+                    class="w-full mt-4 bg-white text-black py-3 px-6 rounded-xl font-semibold opacity-50 cursor-not-allowed"
+                    disabled>
+                    Upload & Anonymize
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div class="bg-[#1a1a1a] rounded-xl p-4 text-center">
+            <div class="mb-3 flex justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold mb-1 text-gray-200">Secure Processing</h3>
+            <p class="text-gray-400">Zero-retention policy</p>
+        </div>
+        <div class="bg-[#1a1a1a] rounded-xl p-4 text-center">
+            <div class="mb-3 flex justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold mb-1 text-gray-200">AI-Powered</h3>
+            <p class="text-gray-400">Smart PII detection</p>
+        </div>
+        <div class="bg-[#1a1a1a] rounded-xl p-4 text-center">
+            <div class="mb-3 flex justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold mb-1 text-gray-200">Multi-Format</h3>
+            <p class="text-gray-400">Text, PDF, DOCX</p>
+        </div>
+    </div>
+
+    <!-- GitHub Profile Button -->
+    <div class="mt-12 pb-8 text-center">
+        <a href="https://github.com/Seddzz" 
+           target="_blank" 
+           class="inline-flex items-center px-6 py-3 rounded-xl font-semibold bg-white text-black border">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"/>
+            </svg>
+            seddz 🏴‍☠️
+        </a>
+    </div>
+</div>
+
+<script>
+// Privacy quotes that rotate randomly
+const privacyQuotes = [
+    "Privacy is not something you have to hide...",
+    "Your identity is your most valuable asset.",
+    "Anonymity is the shield of the digital age.",
+    "Data protection starts with you today.",
+    "In privacy we trust, in anonymity we thrive.",
+    "Your secrets deserve better security always.",
+    "Digital freedom through data anonymization."
+];
+
+// Get random quote
+function getRandomQuote() {
+    return privacyQuotes[Math.floor(Math.random() * privacyQuotes.length)];
+}
+
+// Typing animation for the main title - FIXED to prevent layout shift
+function typeWriter(text, element, speed = 100) {
+    let i = 0;
+    element.style.opacity = '0'; // Start invisible
+    element.innerHTML = text; // Set full text immediately for layout calculation
+    const fullHeight = element.offsetHeight; // Calculate the height needed
+    element.innerHTML = ''; // Clear content
+    element.style.opacity = '1'; // Make visible
+    element.style.minHeight = fullHeight + 'px'; // Reserve space
+    
+    function type() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+        } else {
+            // Add permanently blinking cursor after typing is complete
+            element.innerHTML += '<span class="animate-pulse cursor-blink">|</span>';
+        }
+    }
+    
+    type();
+}
+
+// Start typing animation when page loads - NO DELAY
+document.addEventListener('DOMContentLoaded', function() {
+    const typewriterElement = document.getElementById('typewriter');
+    if (typewriterElement) {
+        // Get random quote and start typing
+        const randomQuote = getRandomQuote();
+        typeWriter(randomQuote, typewriterElement, 60);
+    }
+});
+
+// File upload handling
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-growing textarea
+    const textInput = document.getElementById('textInput');
+    const textSubmitBtn = document.getElementById('textSubmitBtn');
+    
+    function autoGrow() {
+        textInput.style.height = 'auto';
+        textInput.style.height = textInput.scrollHeight + 'px';
+        
+        // Enable/disable submit button based on content
+        if (textInput.value.trim()) {
+            textSubmitBtn.disabled = false;
+            textSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            textSubmitBtn.disabled = true;
+            textSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+    
+    textInput.addEventListener('input', autoGrow);
+    textInput.addEventListener('paste', () => setTimeout(autoGrow, 0));
+    
+    // Initial check
+    autoGrow();
+    
+    // Better solution for form resubmission issue
+    window.addEventListener('pageshow', function(event) {
+        // This fires when page is shown (including back/forward navigation)
+        if (event.persisted || window.performance && window.performance.navigation.type === 2) {
+            // Page was loaded from cache or user navigated back
+            resetForms();
+        }
+    });
+    
+    // Also reset on load
+    window.addEventListener('load', resetForms);
+    
+    function resetForms() {
+        // Reset text form
+        const textForm = document.getElementById('textForm');
+        const fileForm = document.getElementById('fileForm');
+        const textInput = document.getElementById('textInput');
+        const fileInput = document.getElementById('fileInput');
+        
+        if (textForm) textForm.reset();
+        if (fileForm) fileForm.reset();
+        
+        // Clear text input specifically
+        if (textInput) {
+            textInput.value = '';
+            textInput.style.height = 'auto';
+        }
+        
+        // Clear file input
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Reset dropzone
+        resetDropzone();
+        
+        // Re-enable buttons and update states
+        autoGrow();
+        
+        // Force a small delay to ensure everything is reset
+        setTimeout(() => {
+            if (textInput) {
+                textInput.focus();
+                textInput.blur(); // Remove focus to trigger any remaining events
+            }
+        }, 100);
+    }
+    
+    function resetDropzone() {
+        const dropzoneContent = document.getElementById('dropzoneContent');
+        if (dropzoneContent) {
+            dropzoneContent.innerHTML = `
+                <svg class="mx-auto w-10 h-10 text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p class="text-lg font-medium mb-2 text-gray-300">Drop your file here</p>
+                <p class="text-gray-400 mb-3">or click to browse</p>
+                <p class="text-sm text-gray-500">Supports: .txt, .docx, .pdf (max 10MB)</p>
+            `;
+        }
+    }
+
+    // Handle Enter key (Shift+Enter for new line, Enter to submit)
+    textInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (textInput.value.trim()) {
+                const submitBtn = document.querySelector('#textForm button[type="submit"]');
+                // Visual feedback - make button appear pressed
+                submitBtn.style.transform = 'scale(0.98)';
+                submitBtn.style.backgroundColor = '#2a2a2a';
+                
+                // Submit after brief delay for visual feedback
+                setTimeout(() => {
+                    document.getElementById('textForm').submit();
+                }, 100);
+            }
+        }
+    });
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const dropzoneContent = document.getElementById('dropzoneContent');
+    
+    // Click to upload
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop events
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            
+            if (!validTypes.includes(file.type)) {
+                showError('Please select a valid file type (.txt, .docx, or .pdf)');
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                showError('File size must be less than 10MB');
+                return;
+            }
+            
+            // IMPORTANT: Set the file in the file input for form submission
+            // Create a new FileList and assign it to the input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            
+            // Update UI to show file selected
+            dropzone.classList.add('file-selected');
+            dropzoneContent.innerHTML = `
+                <div class="w-16 h-16 mx-auto mb-4 bg-white rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <p class="text-xl font-semibold mb-2 text-white">✓ ${file.name}</p>
+                <p class="text-gray-300 mb-4">Ready to anonymize</p>
+                <div class="inline-flex items-center px-4 py-2 bg-gray-800 rounded-lg text-sm text-gray-300">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    ${(file.size / (1024 * 1024)).toFixed(1)}MB
+                </div>
+            `;
+            
+            uploadBtn.disabled = false;
+            uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            uploadBtn.classList.add('hover:bg-gray-100', 'transition-colors');
+        }
+    }
+    
+    function getFileTypeIcon(fileType) {
+        // Return empty string - no emojis or file type labels
+        return '';
+    }
+    
+    function showError(message) {
+        // Create a temporary error display
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed top-4 right-4 bg-black border border-white text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300';
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+        
+        // Animate in
+        setTimeout(() => {
+            errorDiv.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            errorDiv.classList.add('translate-x-full');
+            setTimeout(() => {
+                document.body.removeChild(errorDiv);
+            }, 300);
+        }, 3000);
+    }
+    
+    // Form submissions with loading state
+    document.getElementById('textForm').addEventListener('submit', function(e) {
+        const text = document.getElementById('textInput').value.trim();
+        if (!text) {
+            e.preventDefault();
+            alert('Please enter some text to anonymize.');
+            return;
+        }
+        showLoading(this);
+    });
+    
+    document.getElementById('fileForm').addEventListener('submit', function(e) {
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            alert('Please select a file to upload.');
+            return;
+        }
+        showLoading(this);
+    });
+    
+    function showLoading(form) {
+        const buttons = form.querySelectorAll('button[type="submit"]');
+        buttons.forEach(btn => {
+            btn.innerHTML = '<div class="spinner mx-auto"></div>';
+            btn.disabled = true;
+        });
+    }
+});
+</script>
+{% endblock %}
