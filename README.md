@@ -1,4 +1,4 @@
-# 🔐 Anonymize Me - Document Anonymization Tool
+# Document Anonymization Tool
 
 A powerful, privacy-first tool for anonymizing sensitive information in documents and text. Runs entirely on your local machine - your data never leaves your computer.
 
