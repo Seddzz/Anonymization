@@ -8,7 +8,6 @@ A powerful, privacy-first tool for anonymizing sensitive information in document
 - 🚀 **AI-Powered Detection** - Smart PII detection using spaCy NLP
 - 📄 **Multi-Format Support** - Text, PDF, and DOCX files
 - ⚡ **Fast & Reliable** - Instant anonymization with realistic replacements
-- 🎨 **Modern UI** - Clean, responsive web interface
 - 🔒 **Zero Data Retention** - Nothing is stored or transmitted
 
 ## 📋 Requirements
@@ -81,26 +80,6 @@ A powerful, privacy-first tool for anonymizing sensitive information in document
    - 📅 Dates and ages
    - 📍 Locations
 
-## 🛠️ Troubleshooting
-
-### Common Issues:
-
-**"Module not found" errors:**
-```bash
-pip install -r requirements.txt
-python -m spacy download en_core_web_sm
-```
-
-**Port already in use:**
-```bash
-# Try a different port
-python app.py --port 5001
-```
-
-**Permission errors on Windows:**
-```bash
-# Run as administrator or check antivirus settings
-```
 
 ## 📁 Project Structure
 
@@ -116,37 +95,7 @@ anonymization/
 └── static/                  # Assets & styling
 ```
 
-## � Privacy & Security
-
-- **Local Processing Only** - No data sent to external servers
-- **No Data Storage** - Nothing is saved after processing
-- **Open Source** - Full transparency of all operations
-- **No Telemetry** - No usage tracking or analytics
-
-## 🎯 Roadmap
+## 🎯 Next
 
 - [ ] LangGraph integration for advanced workflows
 - [ ] Additional file format support (Excel, CSV)
-- [ ] Batch processing capabilities
-- [ ] Custom entity types
-- [ ] API mode for integration
-
-## 🤝 Contributing
-
-Found a bug or want to contribute? 
-
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request
-
-## 📄 License
-
-MIT License - Feel free to use, modify, and distribute.
-
-## 👨‍� Author
-
-Built with ❤️ by [seddz](https://github.com/Seddzz)
-
----
-
-**⚠️ Important:** This tool is designed for legitimate privacy protection. Always ensure you have permission to anonymize documents and comply with relevant data protection laws.
