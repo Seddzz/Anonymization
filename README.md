@@ -23,7 +23,7 @@ A powerful, privacy-first tool for anonymizing sensitive information in document
 
 1. **Download or Clone** this repository:
    ```bash
-   git clone https://github.com/9ada19/PFE2.git
+   git clone https://github.com/Seddzz/Anonymization.git
    cd anonymization
    ```
 
