@@ -9,10 +9,118 @@
   box-sizing: border-box;
 }
 
-body {
+/* Dark Theme (Default) */
+body[data-theme="dark"] {
   font-family: 'Inter', sans-serif;
   background-color: #0d0d0d;
   color: #f0f0f0;
+}
+
+/* Light Theme */
+body[data-theme="light"] {
+  font-family: 'Inter', sans-serif;
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+/* Theme-specific styles */
+body[data-theme="light"] .bg-\[#1a1a1a\] {
+  background-color: #f8f9fa !important;
+  border: 1px solid #e9ecef !important;
+}
+
+/* Feature cards specifically in light theme */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] {
+  background-color: #ffffff !important;
+  border: 1px solid #dee2e6 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Feature card text colors in light theme */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] h3.text-gray-200 {
+  color: #343a40 !important;
+}
+
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] p.text-gray-400 {
+  color: #6c757d !important;
+}
+
+/* Keep feature icons white even in light theme for better visibility */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] svg.text-white {
+  color: #ffffff !important;
+}
+
+/* Add a dark background circle behind icons in light theme for contrast */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] .flex.justify-center {
+  background-color: #343a40;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px auto;
+  border-radius: 50%;
+  align-items: center;
+}
+
+/* Tab buttons in results page - make them white in both themes */
+button[onclick*="showTab"] {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] button[onclick*="showTab"] {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .text-white {
+  color: #1a1a1a !important;
+}
+
+body[data-theme="light"] .text-gray-200 {
+  color: #495057 !important;
+}
+
+body[data-theme="light"] .text-gray-300 {
+  color: #6c757d !important;
+}
+
+body[data-theme="light"] .text-gray-400 {
+  color: #adb5bd !important;
+}
+
+body[data-theme="light"] .placeholder-gray-400::placeholder {
+  color: #6c757d !important;
+}
+
+body[data-theme="light"] .bg-\[#0d0d0d\] {
+  background-color: #ffffff !important;
+  border: 1px solid #dee2e6 !important;
+}
+
+body[data-theme="light"] .bg-gray-800 {
+  background-color: #e9ecef !important;
+}
+
+body[data-theme="light"] .bg-black {
+  background-color: #343a40 !important;
+}
+
+body[data-theme="light"] .text-black {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .border-gray-600 {
+  border-color: #ced4da !important;
+}
+
+body[data-theme="light"] .border-gray-500 {
+  border-color: #adb5bd !important;
+}
+
+body[data-theme="light"] .border-gray-700 {
+  border-color: #dee2e6 !important;
+}
+
+/* Keep all text-white elements white in light theme */
+body[data-theme="light"] .text-white {
+  color: #ffffff !important;
 }
 
 /* Custom Font Class */
@@ -31,23 +139,42 @@ body {
   51%, 100% { opacity: 0; }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
+/* Custom Scrollbar - Dark Theme */
+body[data-theme="dark"] ::-webkit-scrollbar {
   width: 8px;
 }
 
-::-webkit-scrollbar-track {
+body[data-theme="dark"] ::-webkit-scrollbar-track {
   background: #1a1a1a;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb {
+body[data-theme="dark"] ::-webkit-scrollbar-thumb {
   background-color: #4a4a4a;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+body[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background-color: #666;
+}
+
+/* Custom Scrollbar - Light Theme */
+body[data-theme="light"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+body[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+body[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background-color: #c1c8cd;
+  border-radius: 4px;
+}
+
+body[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background-color: #a8b3ba;
 }
 
 /* File Upload Drag & Drop Styles */
@@ -91,10 +218,56 @@ body {
   color: #ffffff !important;
 }
 
-/* Loading Animation */
-.spinner {
+/* Light theme drag and drop styles */
+body[data-theme="light"] .dropzone.dragover {
+  background-color: #f8f9fa !important;
+  border-color: #343a40 !important;
+  box-shadow: 0 0 0 4px rgba(52, 58, 64, 0.1);
+}
+
+body[data-theme="light"] .dropzone.dragover .w-16 {
+  background-color: #343a40 !important;
+}
+
+body[data-theme="light"] .dropzone.dragover svg {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .dropzone.dragover p {
+  color: #343a40 !important;
+}
+
+body[data-theme="light"] .file-selected {
+  background-color: #f8f9fa !important;
+  border-color: #343a40 !important;
+}
+
+body[data-theme="light"] .file-selected .w-16 {
+  background-color: #343a40 !important;
+}
+
+body[data-theme="light"] .file-selected svg {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .file-selected p {
+  color: #343a40 !important;
+}
+
+/* Loading Animation - Dark Theme */
+body[data-theme="dark"] .spinner {
   border: 4px solid rgba(240, 240, 240, 0.1);
   border-top: 4px solid #f0f0f0;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+/* Loading Animation - Light Theme */
+body[data-theme="light"] .spinner {
+  border: 4px solid rgba(52, 58, 64, 0.1);
+  border-top: 4px solid #343a40;
   border-radius: 50%;
   width: 50px;
   height: 50px;
@@ -106,15 +279,144 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* File Drop Zone */
-.dropzone {
-  transition: all 0.3s ease;
-}
-
-.dropzone:hover,
-.dropzone.dragover {
+/* File Drop Zone - Dark Theme */
+body[data-theme="dark"] .dropzone:hover,
+body[data-theme="dark"] .dropzone.dragover {
   background-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* File Drop Zone - Light Theme */
+body[data-theme="light"] .dropzone:hover,
+body[data-theme="light"] .dropzone.dragover {
+  background-color: rgba(52, 58, 64, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Theme Toggle Button */
+body[data-theme="dark"] .theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+body[data-theme="dark"] .theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body[data-theme="light"] .theme-toggle-btn {
+  background: rgba(52, 58, 64, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(52, 58, 64, 0.2);
+  color: #343a40;
+}
+
+body[data-theme="light"] .theme-toggle-btn:hover {
+  background: rgba(52, 58, 64, 0.2);
+}
+
+/* Additional Light Theme Overrides */
+body[data-theme="light"] .bg-white {
+  background-color: #343a40 !important;
+}
+
+body[data-theme="light"] .border-white {
+  border-color: #343a40 !important;
+}
+
+body[data-theme="light"] .border-gray-300 {
+  border-color: #adb5bd !important;
+}
+
+/* Text color overrides for light theme - more specific */
+body[data-theme="light"] .text-gray-200 {
+  color: #495057 !important;
+}
+
+body[data-theme="light"] .text-gray-300 {
+  color: #6c757d !important;
+}
+
+body[data-theme="light"] .text-gray-400 {
+  color: #adb5bd !important;
+}
+
+/* Keep specific white text elements white in light theme */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] .text-white,
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] h3.text-gray-200 {
+  color: #ffffff !important;
+}
+
+/* Stats section - keep numbers white */
+body[data-theme="light"] .grid .bg-\[#1a1a1a\] .text-2xl.font-bold.text-white {
+  color: #ffffff !important;
+}
+
+/* Status message colors for light theme */
+body[data-theme="light"] .text-green-300 {
+  color: #198754 !important;
+}
+
+body[data-theme="light"] .text-red-400 {
+  color: #dc3545 !important;
+}
+
+body[data-theme="light"] .text-yellow-400 {
+  color: #ffc107 !important;
+}
+
+/* Submit button icon should be white on dark background */
+body[data-theme="light"] .bg-white.text-black svg {
+  color: #ffffff !important;
+}
+
+/* Dropzone icons should be visible */
+body[data-theme="light"] .dropzone svg {
+  color: #343a40 !important;
+}
+
+body[data-theme="light"] .dropzone .bg-gray-800 svg {
+  color: #ffffff !important;
+}
+
+/* Button styling for light theme */
+body[data-theme="light"] .bg-white.text-black {
+  background-color: #343a40 !important;
+  color: #ffffff !important;
+}
+
+/* Success message styling for light theme */
+body[data-theme="light"] .bg-black.border-white {
+  background-color: #f8f9fa !important;
+  border-color: #343a40 !important;
+  color: #343a40 !important;
+}
+
+/* Logo inversion for light theme */
+body[data-theme="light"] img[src*="logo.png"] {
+  filter: invert(1);
+}
+
+/* Stats numbers should stay white in light theme */
+body[data-theme="light"] .text-2xl.font-bold.text-white {
+  color: #ffffff !important;
+}
+
+/* GitHub button styling for light theme */
+body[data-theme="light"] .bg-white.text-black.border {
+  background-color: #343a40 !important;
+  color: #ffffff !important;
+  border-color: #343a40 !important;
+}
+
+/* Success checkmark icon should be inverted for light theme */
+body[data-theme="light"] .bg-white.rounded-full svg {
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .bg-white.rounded-full {
+  background-color: #343a40 !important;
 }
 
 /* Smooth transitions for interactive elements */
