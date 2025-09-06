@@ -62,12 +62,6 @@ A powerful, privacy-first tool for anonymizing sensitive information in document
 7. **Open Your Browser:**
    Navigate to `http://127.0.0.1:5000`
 
-### Option 2: One-Line Install (Advanced Users)
-
-```bash
-git clone https://github.com/9ada19/PFE2.git && cd anonymization && python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt && python -m spacy download en_core_web_sm && python app.py
-```
-
 ## � Usage
 
 1. **Text Anonymization:**
