@@ -1,276 +1,103 @@
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+/* Clean, Simple Styles for SecureDoc */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Base Styles - Minimal to let Tailwind handle most styling */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Dark Theme (Default) */
-body[data-theme="dark"] {
+body {
   font-family: 'Inter', sans-serif;
-  background-color: #0d0d0d;
-  color: #f0f0f0;
+  line-height: 1.6;
+  color: #374151;
+  background-color: #f9fafb;
 }
 
-/* Light Theme */
-body[data-theme="light"] {
-  font-family: 'Inter', sans-serif;
-  background-color: #ffffff;
-  color: #1a1a1a;
+/* Smooth transitions for interactive elements */
+button, textarea, input {
+  transition: all 0.2s ease-in-out;
 }
 
-/* Theme-specific styles */
-body[data-theme="light"] .bg-\[#1a1a1a\] {
-  background-color: #f8f9fa !important;
-  border: 1px solid #e9ecef !important;
+/* Focus styles for accessibility */
+textarea:focus, input:focus, button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
-/* Feature cards specifically in light theme */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] {
-  background-color: #ffffff !important;
-  border: 1px solid #dee2e6 !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-}
-
-/* Feature card text colors in light theme */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] h3.text-gray-200 {
-  color: #343a40 !important;
-}
-
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] p.text-gray-400 {
-  color: #6c757d !important;
-}
-
-/* Keep feature icons white even in light theme for better visibility */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] svg.text-white {
-  color: #ffffff !important;
-}
-
-/* Add a dark background circle behind icons in light theme for contrast */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] .flex.justify-center {
-  background-color: #343a40;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px auto;
-  border-radius: 50%;
-  align-items: center;
-}
-
-/* Tab buttons in results page - make them white in both themes */
-button[onclick*="showTab"] {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] button[onclick*="showTab"] {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] .text-white {
-  color: #1a1a1a !important;
-}
-
-body[data-theme="light"] .text-gray-200 {
-  color: #495057 !important;
-}
-
-body[data-theme="light"] .text-gray-300 {
-  color: #6c757d !important;
-}
-
-body[data-theme="light"] .text-gray-400 {
-  color: #adb5bd !important;
-}
-
-body[data-theme="light"] .placeholder-gray-400::placeholder {
-  color: #6c757d !important;
-}
-
-body[data-theme="light"] .bg-\[#0d0d0d\] {
-  background-color: #ffffff !important;
-  border: 1px solid #dee2e6 !important;
-}
-
-body[data-theme="light"] .bg-gray-800 {
-  background-color: #e9ecef !important;
-}
-
-body[data-theme="light"] .bg-black {
-  background-color: #343a40 !important;
-}
-
-body[data-theme="light"] .text-black {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] .border-gray-600 {
-  border-color: #ced4da !important;
-}
-
-body[data-theme="light"] .border-gray-500 {
-  border-color: #adb5bd !important;
-}
-
-body[data-theme="light"] .border-gray-700 {
-  border-color: #dee2e6 !important;
-}
-
-/* Keep all text-white elements white in light theme */
-body[data-theme="light"] .text-white {
-  color: #ffffff !important;
-}
-
-/* Custom Font Class */
-.pixelated-text {
-  font-family: 'Pixelify Sans', sans-serif;
-  letter-spacing: -2px;
-}
-
-/* Typewriter cursor animation */
-.typewriter-cursor {
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-/* Custom Scrollbar - Dark Theme */
-body[data-theme="dark"] ::-webkit-scrollbar {
+/* Custom scrollbar for textarea */
+textarea::-webkit-scrollbar {
   width: 8px;
 }
 
-body[data-theme="dark"] ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+textarea::-webkit-scrollbar-track {
+  background: #f1f5f9;
   border-radius: 4px;
 }
 
-body[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background-color: #4a4a4a;
+textarea::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
-body[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background-color: #666;
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
-/* Custom Scrollbar - Light Theme */
-body[data-theme="light"] ::-webkit-scrollbar {
-  width: 8px;
+/* Animation for the shield icon */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .8;
+  }
 }
 
-body[data-theme="light"] ::-webkit-scrollbar-track {
-  background: #f1f3f4;
-  border-radius: 4px;
+.shield-icon {
+  animation: pulse 3s ease-in-out infinite;
 }
 
-body[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background-color: #c1c8cd;
-  border-radius: 4px;
+/* Hover effects for cards */
+.feature-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-body[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background-color: #a8b3ba;
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* File Upload Drag & Drop Styles */
-.dropzone {
-  transition: all 0.3s ease;
+/* File upload animation */
+.upload-success {
+  animation: bounce 0.5s ease-in-out;
 }
 
-.dropzone.dragover {
-  background-color: #1a1a1a !important;
-  border-color: #ffffff !important;
-  transform: scale(1.02);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -10px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+    transform: translate3d(0, -5px, 0);
+  }
+  90% {
+    transform: translate3d(0,-2px,0);
+  }
 }
 
-.dropzone.dragover .w-16 {
-  background-color: #ffffff !important;
-}
-
-.dropzone.dragover svg {
-  color: #000000 !important;
-}
-
-.dropzone.dragover p {
-  color: #ffffff !important;
-}
-
-.file-selected {
-  background-color: #1a1a1a !important;
-  border-color: #ffffff !important;
-}
-
-.file-selected .w-16 {
-  background-color: #ffffff !important;
-}
-
-.file-selected svg {
-  color: #000000 !important;
-}
-
-.file-selected p {
-  color: #ffffff !important;
-}
-
-/* Light theme drag and drop styles */
-body[data-theme="light"] .dropzone.dragover {
-  background-color: #f8f9fa !important;
-  border-color: #343a40 !important;
-  box-shadow: 0 0 0 4px rgba(52, 58, 64, 0.1);
-}
-
-body[data-theme="light"] .dropzone.dragover .w-16 {
-  background-color: #343a40 !important;
-}
-
-body[data-theme="light"] .dropzone.dragover svg {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] .dropzone.dragover p {
-  color: #343a40 !important;
-}
-
-body[data-theme="light"] .file-selected {
-  background-color: #f8f9fa !important;
-  border-color: #343a40 !important;
-}
-
-body[data-theme="light"] .file-selected .w-16 {
-  background-color: #343a40 !important;
-}
-
-body[data-theme="light"] .file-selected svg {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] .file-selected p {
-  color: #343a40 !important;
-}
-
-/* Loading Animation - Dark Theme */
-body[data-theme="dark"] .spinner {
-  border: 4px solid rgba(240, 240, 240, 0.1);
-  border-top: 4px solid #f0f0f0;
+/* Loading spinner for forms */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3b82f6;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-}
-
-/* Loading Animation - Light Theme */
-body[data-theme="light"] .spinner {
-  border: 4px solid rgba(52, 58, 64, 0.1);
-  border-top: 4px solid #343a40;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
   animation: spin 1s linear infinite;
 }
 
@@ -279,206 +106,17 @@ body[data-theme="light"] .spinner {
   100% { transform: rotate(360deg); }
 }
 
-/* File Drop Zone - Dark Theme */
-body[data-theme="dark"] .dropzone:hover,
-body[data-theme="dark"] .dropzone.dragover {
-  background-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-/* File Drop Zone - Light Theme */
-body[data-theme="light"] .dropzone:hover,
-body[data-theme="light"] .dropzone.dragover {
-  background-color: rgba(52, 58, 64, 0.05);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-/* Theme Toggle Button */
-body[data-theme="dark"] .theme-toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-}
-
-body[data-theme="dark"] .theme-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-body[data-theme="light"] .theme-toggle-btn {
-  background: rgba(52, 58, 64, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(52, 58, 64, 0.2);
-  color: #343a40;
-}
-
-body[data-theme="light"] .theme-toggle-btn:hover {
-  background: rgba(52, 58, 64, 0.2);
-}
-
-/* Additional Light Theme Overrides */
-body[data-theme="light"] .bg-white {
-  background-color: #343a40 !important;
-}
-
-body[data-theme="light"] .border-white {
-  border-color: #343a40 !important;
-}
-
-body[data-theme="light"] .border-gray-300 {
-  border-color: #adb5bd !important;
-}
-
-/* Text color overrides for light theme - more specific */
-body[data-theme="light"] .text-gray-200 {
-  color: #495057 !important;
-}
-
-body[data-theme="light"] .text-gray-300 {
-  color: #6c757d !important;
-}
-
-body[data-theme="light"] .text-gray-400 {
-  color: #adb5bd !important;
-}
-
-/* Keep specific white text elements white in light theme */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] .text-white,
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] h3.text-gray-200 {
-  color: #ffffff !important;
-}
-
-/* Stats section - keep numbers white */
-body[data-theme="light"] .grid .bg-\[#1a1a1a\] .text-2xl.font-bold.text-white {
-  color: #ffffff !important;
-}
-
-/* Status message colors for light theme */
-body[data-theme="light"] .text-green-300 {
-  color: #198754 !important;
-}
-
-body[data-theme="light"] .text-red-400 {
-  color: #dc3545 !important;
-}
-
-body[data-theme="light"] .text-yellow-400 {
-  color: #ffc107 !important;
-}
-
-/* Submit button icon should be white on dark background */
-body[data-theme="light"] .bg-white.text-black svg {
-  color: #ffffff !important;
-}
-
-/* Dropzone icons should be visible */
-body[data-theme="light"] .dropzone svg {
-  color: #343a40 !important;
-}
-
-body[data-theme="light"] .dropzone .bg-gray-800 svg {
-  color: #ffffff !important;
-}
-
-/* Button styling for light theme */
-body[data-theme="light"] .bg-white.text-black {
-  background-color: #343a40 !important;
-  color: #ffffff !important;
-}
-
-/* Success message styling for light theme */
-body[data-theme="light"] .bg-black.border-white {
-  background-color: #f8f9fa !important;
-  border-color: #343a40 !important;
-  color: #343a40 !important;
-}
-
-/* Logo inversion for light theme */
-body[data-theme="light"] img[src*="logo.png"] {
-  filter: invert(1);
-}
-
-/* Stats numbers should stay white in light theme */
-body[data-theme="light"] .text-2xl.font-bold.text-white {
-  color: #ffffff !important;
-}
-
-/* GitHub button styling for light theme */
-body[data-theme="light"] .bg-white.text-black.border {
-  background-color: #343a40 !important;
-  color: #ffffff !important;
-  border-color: #343a40 !important;
-}
-
-/* Success checkmark icon should be inverted for light theme */
-body[data-theme="light"] .bg-white.rounded-full svg {
-  color: #ffffff !important;
-}
-
-body[data-theme="light"] .bg-white.rounded-full {
-  background-color: #343a40 !important;
-}
-
-/* Smooth transitions for interactive elements */
-.transition-all {
-  transition: all 0.2s ease;
-}
-
-.hover-scale:hover {
-  transform: scale(1.05);
-}
-
-/* Modern textarea styling */
-#textInput {
-  transition: height 0.2s ease;
-  line-height: 1.5;
-}
-
-#textInput::-webkit-scrollbar {
-  width: 4px;
-}
-
-#textInput::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#textInput::-webkit-scrollbar-thumb {
-  background-color: #4a4a4a;
-  border-radius: 2px;
-}
-
-/* Simple white button effects */
-.simple-hover {
-  background: white;
-  color: black;
-  border: 1px solid white;
-  transition: all 0.3s ease;
-}
-
-.simple-hover:hover {
-  background: black;
-  color: white;
-  border-color: white;
-}
-
-/* GitHub button styling */
-.github-btn {
-  background: white;
-  color: black;
-  border: 1px solid white;
-  transition: all 0.3s ease;
-}
-
-.github-btn:hover {
-  background: black;
-  color: white;
-  border-color: white;
-}
-
-/* Focus styles for accessibility */
-button:focus,
-input:focus,
-textarea:focus {
-  outline: 2px solid #f0f0f0;
-  outline-offset: 2px;
+/* Responsive design improvements */
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }

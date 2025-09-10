@@ -1,15 +1,14 @@
-// Minimal JavaScript for anonymization app
-// Only includes essential functionality
-
+// Clean JavaScript for SecureDoc - Data Privacy Tool
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
 function initializeApp() {
-    // Only run if we're on the index page
+    // Only run if we're on the main page
     if (document.getElementById('textForm')) {
         setupFileUpload();
         setupFormValidation();
+        setupTextInput();
     }
 }
 
@@ -34,17 +33,17 @@ function setupFileUpload() {
 
 function handleDragOver(e) {
     e.preventDefault();
-    e.currentTarget.classList.add('dragover');
+    e.currentTarget.classList.add('border-blue-400', 'bg-blue-50');
 }
 
 function handleDragLeave(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
+    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
 }
 
 function handleDrop(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
+    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
     handleFiles(e.dataTransfer.files);
 }
 
@@ -52,45 +51,43 @@ function handleFiles(files) {
     if (files.length === 0) return;
     
     const file = files[0];
-    const validTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const uploadBtn = document.getElementById('uploadBtn');
+    const dropzoneContent = document.getElementById('dropzoneContent');
     
-    // Validation
-    if (!validTypes.includes(file.type)) {
-        showAlert('Please select a valid file type (.txt, .docx, or .pdf)');
+    // Validate file type
+    const allowedTypes = ['.txt', '.docx', '.pdf'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!allowedTypes.includes(fileExtension)) {
+        alert('Please select a valid file type: TXT, DOCX, or PDF');
         return;
     }
     
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
     if (file.size > maxSize) {
-        showAlert('File size must be less than 10MB');
+        alert('File size must be less than 10MB');
         return;
     }
     
     // Update UI to show selected file
-    updateDropzoneUI(file);
-    enableUploadButton();
-}
-
-function updateDropzoneUI(file) {
-    const dropzoneContent = document.getElementById('dropzoneContent');
-    if (!dropzoneContent) return;
+    const fileName = file.name;
+    const fileSize = (file.size / 1024 / 1024).toFixed(2);
     
     dropzoneContent.innerHTML = `
-        <svg class="mx-auto w-12 h-12 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <p class="text-lg font-medium mb-2">${file.name}</p>
-        <p class="text-gray-400">${formatFileSize(file.size)}</p>
+        <div class="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <p class="text-lg font-medium mb-2 text-gray-700">${fileName}</p>
+        <p class="text-gray-500 text-sm">${fileSize} MB • Ready to upload</p>
     `;
-}
-
-function enableUploadButton() {
-    const uploadBtn = document.getElementById('uploadBtn');
-    if (!uploadBtn) return;
     
+    // Enable upload button
     uploadBtn.disabled = false;
-    uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    uploadBtn.classList.add('hover-scale');
+    uploadBtn.classList.remove('bg-gray-300', 'cursor-not-allowed');
+    uploadBtn.classList.add('bg-green-600', 'hover:bg-green-700');
 }
 
 function setupFormValidation() {
@@ -98,81 +95,98 @@ function setupFormValidation() {
     const fileForm = document.getElementById('fileForm');
     
     if (textForm) {
-        textForm.addEventListener('submit', validateTextForm);
+        textForm.addEventListener('submit', function(e) {
+            const textInput = document.getElementById('textInput');
+            if (!textInput.value.trim()) {
+                e.preventDefault();
+                alert('Please enter some text to anonymize.');
+                textInput.focus();
+            } else {
+                // Show loading state
+                const submitBtn = document.getElementById('textSubmitBtn');
+                submitBtn.innerHTML = 'Processing...';
+                submitBtn.disabled = true;
+            }
+        });
     }
     
     if (fileForm) {
-        fileForm.addEventListener('submit', validateFileForm);
+        fileForm.addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select a file to upload.');
+            } else {
+                // Show loading state
+                const uploadBtn = document.getElementById('uploadBtn');
+                uploadBtn.innerHTML = 'Uploading...';
+                uploadBtn.disabled = true;
+            }
+        });
     }
 }
 
-function validateTextForm(e) {
+function setupTextInput() {
     const textInput = document.getElementById('textInput');
-    if (!textInput || !textInput.value.trim()) {
-        e.preventDefault();
-        showAlert('Please enter some text to anonymize.');
-        return;
-    }
-    showLoadingState(e.target);
-}
-
-function validateFileForm(e) {
-    const fileInput = document.getElementById('fileInput');
-    if (!fileInput || !fileInput.files.length) {
-        e.preventDefault();
-        showAlert('Please select a file to upload.');
-        return;
-    }
-    showLoadingState(e.target);
-}
-
-function showLoadingState(form) {
-    const buttons = form.querySelectorAll('button[type="submit"]');
-    buttons.forEach(btn => {
-        btn.innerHTML = '<div class="spinner mx-auto"></div>';
-        btn.disabled = true;
+    if (!textInput) return;
+    
+    // Auto-resize textarea
+    textInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
     });
     
-    // Disable all inputs
-    const inputs = form.querySelectorAll('input, textarea');
-    inputs.forEach(input => input.disabled = true);
-}
-
-// Utility functions
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function showAlert(message) {
-    // Simple alert for now - can be replaced with a nicer modal later
-    alert(message);
-}
-
-// Copy to clipboard functionality (for results page)
-function copyToClipboard(text) {
-    if (!text) {
-        const textElement = document.querySelector('#anonymizedContent pre');
-        text = textElement ? textElement.textContent : '';
-    }
+    // Character counter (optional)
+    const maxLength = 10000;
+    textInput.setAttribute('maxlength', maxLength);
     
-    if (navigator.clipboard) {
-        return navigator.clipboard.writeText(text);
-    } else {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-        } catch (err) {
-            console.error('Copy failed:', err);
+    textInput.addEventListener('input', function() {
+        const remaining = maxLength - this.value.length;
+        const submitBtn = document.getElementById('textSubmitBtn');
+        
+        if (remaining < 100) {
+            // Show warning when approaching limit
+            if (!document.getElementById('charCounter')) {
+                const counter = document.createElement('div');
+                counter.id = 'charCounter';
+                counter.className = 'text-sm text-gray-500 mt-2 text-right';
+                this.parentNode.appendChild(counter);
+            }
+            document.getElementById('charCounter').textContent = `${remaining} characters remaining`;
+        } else {
+            // Remove counter when not needed
+            const counter = document.getElementById('charCounter');
+            if (counter) counter.remove();
         }
-        document.body.removeChild(textArea);
-        return Promise.resolve();
-    }
+        
+        // Enable/disable submit button based on content
+        if (this.value.trim().length > 0) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    });
+}
+
+// Utility function for smooth scrolling
+function smoothScrollTo(element) {
+    element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+    });
+}
+
+// Privacy-focused messaging
+const privacyMessages = [
+    "Your data is processed locally and never stored",
+    "Zero-retention policy ensures complete privacy", 
+    "Advanced AI removes personal information safely",
+    "Secure processing protects your sensitive data"
+];
+
+function showPrivacyMessage() {
+    const message = privacyMessages[Math.floor(Math.random() * privacyMessages.length)];
+    console.log(`🔒 SecureDoc: ${message}`);
 }
