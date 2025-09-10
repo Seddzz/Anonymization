@@ -9,6 +9,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from utils.file_processor import extract_text_from_file
 from utils.document_processor import DocumentProcessor
+from utils.advanced_pdf_processor import FormattingPreservedDocumentProcessor
 import tempfile
 
 # Load environment variables (including PYTHONDONTWRITEBYTECODE=1)
@@ -180,9 +181,15 @@ def anonymize():
                     file.save(temp_input_path)
                     
                     try:
-                        # Use DocumentProcessor to create anonymized document
-                        doc_processor = DocumentProcessor(pipeline)
-                        result = doc_processor.process_file(temp_input_path, file_extension)
+                        # Use advanced document processor for better formatting preservation
+                        if file_extension == 'pdf':
+                            # Use advanced PDF processor that preserves formatting
+                            doc_processor = FormattingPreservedDocumentProcessor(pipeline)
+                            result = doc_processor.process_file(temp_input_path, file_extension)
+                        else:
+                            # Use regular document processor for other formats
+                            doc_processor = DocumentProcessor(pipeline)
+                            result = doc_processor.process_file(temp_input_path, file_extension)
                         
                         if result['success']:
                             # Store file path for download
@@ -215,6 +222,7 @@ def anonymize():
                                 'workflow_type': 'Document Processing',
                                 'source_file': file.filename,
                                 'output_file': os.path.basename(result['output_path']),
+                                'file_type': result.get('file_type', file_extension),
                                 'has_file_download': True,
                                 'message': result.get('message', 'Document processed successfully')
                             }

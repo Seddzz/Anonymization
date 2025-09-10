@@ -35,47 +35,284 @@
         </div>
         
         <div class="bg-white rounded-lg p-6 shadow text-center">
-            <div class="text-3xl font-bold text-purple-600 mb-2">{{ "%.1f"|format(stats.processing_time) if stats else '0.0' }}s</div>
+            <div class="text-3xl font-bold text-purple-600 mb-2">{{ stats.processing_time if stats and stats.processing_time else '0.0' }}s</div>
             <div class="text-sm text-gray-600">Processing Time</div>
         </div>
     </div>
 
     <!-- Results Display -->
     <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Anonymized Content</h2>
+        
+        <!-- Tab Navigation -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-8">
+                <button 
+                    id="comparisonTab"
+                    onclick="showTab('comparison')" 
+                    class="py-3 px-1 border-b-2 border-blue-600 text-blue-600 font-semibold text-sm">
+                    Text Comparison
+                </button>
+                <button 
+                    id="changesTab"
+                    onclick="showTab('changes')" 
+                    class="py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                    Detected Changes
+                </button>
+                <button 
+                    id="statsTab"
+                    onclick="showTab('stats')" 
+                    class="py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                    Statistics
+                </button>
+            </nav>
+        </div>
+
+        <!-- Comparison Tab Content -->
+        <div id="comparisonTabContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Side-by-Side Comparison</h3>
+                
+                <!-- Toggle View and Copy Button -->
+                <div class="flex space-x-3">
+                    <button 
+                        id="toggleView"
+                        onclick="toggleComparison()" 
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Switch to Single View
+                    </button>
+                    <button 
+                        onclick="copyToClipboard()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Copy Anonymized Text
+                    </button>
+                </div>
+            </div>
             
-            <!-- Copy Button -->
-            <button 
-                onclick="copyToClipboard()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Copy Result
-            </button>
+            <!-- Side-by-Side Comparison (Default View) -->
+            <div id="comparisonView" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Original Text -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    Original Text (with personal info)
+                </h3>
+                <textarea 
+                    readonly
+                    class="w-full h-64 p-4 bg-red-50 border border-red-200 rounded-lg resize-none focus:outline-none text-gray-800 text-sm"
+                    >{{ result.original_text if result.original_text else session.get('original_text', 'Original text not available') }}</textarea>
+            </div>
+            
+            <!-- Anonymized Text -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    Anonymized Text (privacy protected)
+                </h3>
+                <textarea 
+                    id="resultText" 
+                    readonly
+                    class="w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800 text-sm"
+                    >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+            </div>
         </div>
         
-        <!-- Anonymized Text Display -->
-        <div class="relative">
-            <textarea 
-                id="resultText" 
-                readonly
-                class="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800"
-                >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+        <!-- Single View (Hidden by default) -->
+        <div id="singleView" class="hidden">
+            <div class="mb-4">
+                <div class="flex space-x-2 bg-gray-100 p-1 rounded-lg w-fit">
+                    <button 
+                        id="showOriginal"
+                        onclick="showOriginalText()" 
+                        class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-white transition-colors">
+                        Original
+                    </button>
+                    <button 
+                        id="showAnonymized"
+                        onclick="showAnonymizedText()" 
+                        class="px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-900 shadow-sm">
+                        Anonymized
+                    </button>
+                </div>
+            </div>
+            
+            <div class="relative">
+                <textarea 
+                    id="singleViewText" 
+                    readonly
+                    class="w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800"
+                    >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+            </div>
+        </div>
+        
+        <!-- Legend -->
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div class="flex flex-wrap gap-4 text-sm">
+                <div class="flex items-center">
+                    <div class="w-4 h-4 bg-red-100 border border-red-200 rounded mr-2"></div>
+                    <span class="text-gray-600">Original contains personal information</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-4 h-4 bg-green-100 border border-green-200 rounded mr-2"></div>
+                    <span class="text-gray-600">Anonymized text is safe to share</span>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Changes Tab Content (Hidden by default) -->
+        <div id="changesTabContent" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-800 mb-6">Detected Personal Information</h3>
+            
+            {% if changes and changes|length > 0 %}
+            <div class="space-y-4">
+                {% for change in changes %}
+                <div class="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {{ change.type if change.type else 'PII' }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-xs font-medium text-red-700 uppercase tracking-wide">Original</span>
+                                <p class="text-sm text-gray-900 font-mono bg-red-100 px-2 py-1 rounded mt-1">{{ change.original }}</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-medium text-green-700 uppercase tracking-wide">Anonymized</span>
+                                <p class="text-sm text-gray-900 font-mono bg-green-100 px-2 py-1 rounded mt-1">{{ change.replacement }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-700 mb-2">No Personal Information Detected</h4>
+                <p class="text-gray-500">Your text appears to be free of personally identifiable information.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Statistics Tab Content (Hidden by default) -->
+        <div id="statsTabContent" class="hidden">
+            <h3 class="text-lg font-semibold text-gray-800 mb-6">Processing Statistics</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Processing Details -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                    <h4 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        Processing Details
+                    </h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Processing Time:</span>
+                            <span class="font-semibold">{{ stats.processing_time if stats and stats.processing_time else '0.0' }}s</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Detection Method:</span>
+                            <span class="font-semibold">{{ stats.detector_used if stats.detector_used else 'SpaCy NER' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Input Length:</span>
+                            <span class="font-semibold">{{ result.original_text|length if result.original_text else session.get('original_text', '')|length }} chars</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Output Length:</span>
+                            <span class="font-semibold">{{ result.anonymized_text|length if result.anonymized_text else 0 }} chars</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Entity Types Found -->
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
+                    <h4 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Entity Types
+                    </h4>
+                    {% if changes and changes|length > 0 %}
+                    <div class="space-y-2">
+                        {% set entity_counts = {} %}
+                        {% for change in changes %}
+                            {% set _ = entity_counts.update({change.type: entity_counts.get(change.type, 0) + 1}) %}
+                        {% endfor %}
+                        {% for entity_type, count in entity_counts.items() %}
+                        <div class="flex justify-between items-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ entity_type }}
+                            </span>
+                            <span class="font-semibold text-green-600">{{ count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-gray-600 text-sm">No personal information types detected.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Privacy Score -->
+            <div class="mt-6 bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Privacy Protection Score</h4>
+                        <p class="text-sm text-gray-600">Based on detected and anonymized personal information</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-3xl font-bold text-purple-600">
+                            {% if changes and changes|length > 0 %}100%{% else %}N/A{% endif %}
+                        </div>
+                        <div class="text-sm text-purple-600 font-medium">
+                            {% if changes and changes|length > 0 %}Protected{% else %}Clean{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Download Options (for files) -->
-    {% if result.file_type %}
+    {% if result.has_file_download %}
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{{ url_for('download', filename=result.output_file) }}" 
-               class="bg-green-600 hover:bg-green-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
-                Download Anonymized {{ result.file_type.upper() }}
+        <div class="flex justify-center">
+            <a href="{{ url_for('download_file') }}" 
+               class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-lg font-medium transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download Anonymized {% if result.file_type %}{{ result.file_type.upper() }}{% else %}Document{% endif %}
             </a>
-            <a href="{{ url_for('download', filename=result.original_file) }}" 
-               class="bg-gray-600 hover:bg-gray-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
-                Download Original
-            </a>
+        </div>
+        <div class="mt-3 text-center text-sm text-gray-600">
+            File: {{ result.output_file }}{% if result.file_type %} ({{ result.file_type.upper() }}){% endif %}
+        </div>
+        <div class="mt-2 text-center text-xs text-gray-500">
+            {% if result.file_type == 'pdf' %}
+            🎨 <strong>Advanced Format Preservation</strong> - Maintains original fonts, colors, sizes, positions, and layout
+            {% else %}
+            📄 Format preserved - maintains original document structure and styling
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -94,15 +331,66 @@
     </div>
 </div>
 
-<!-- JavaScript for copy functionality -->
+<!-- JavaScript for enhanced functionality -->
 <script>
+// Store original and anonymized text
+const originalText = `{{ result.original_text if result.original_text else session.get('original_text', 'Original text not available') }}`;
+const anonymizedText = `{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}`;
+let isComparisonView = true;
+let currentSingleView = 'anonymized';
+let currentTab = 'comparison';
+
+// Tab switching functionality
+function showTab(tabName) {
+    // Hide all tab contents
+    document.getElementById('comparisonTabContent').classList.add('hidden');
+    document.getElementById('changesTabContent').classList.add('hidden');
+    document.getElementById('statsTabContent').classList.add('hidden');
+    
+    // Remove active class from all tabs
+    document.getElementById('comparisonTab').classList.remove('border-blue-600', 'text-blue-600');
+    document.getElementById('comparisonTab').classList.add('border-transparent', 'text-gray-500');
+    document.getElementById('changesTab').classList.remove('border-blue-600', 'text-blue-600');
+    document.getElementById('changesTab').classList.add('border-transparent', 'text-gray-500');
+    document.getElementById('statsTab').classList.remove('border-blue-600', 'text-blue-600');
+    document.getElementById('statsTab').classList.add('border-transparent', 'text-gray-500');
+    
+    // Show selected tab content and activate tab
+    if (tabName === 'comparison') {
+        document.getElementById('comparisonTabContent').classList.remove('hidden');
+        document.getElementById('comparisonTab').classList.remove('border-transparent', 'text-gray-500');
+        document.getElementById('comparisonTab').classList.add('border-blue-600', 'text-blue-600');
+    } else if (tabName === 'changes') {
+        document.getElementById('changesTabContent').classList.remove('hidden');
+        document.getElementById('changesTab').classList.remove('border-transparent', 'text-gray-500');
+        document.getElementById('changesTab').classList.add('border-blue-600', 'text-blue-600');
+    } else if (tabName === 'stats') {
+        document.getElementById('statsTabContent').classList.remove('hidden');
+        document.getElementById('statsTab').classList.remove('border-transparent', 'text-gray-500');
+        document.getElementById('statsTab').classList.add('border-blue-600', 'text-blue-600');
+    }
+    
+    currentTab = tabName;
+}
+
 function copyToClipboard() {
-    const textArea = document.getElementById('resultText');
-    textArea.select();
-    textArea.setSelectionRange(0, 99999); // For mobile devices
+    let textToCopy;
+    if (isComparisonView) {
+        textToCopy = document.getElementById('resultText').value;
+    } else {
+        textToCopy = document.getElementById('singleViewText').value;
+    }
+    
+    // Create temporary textarea for copying
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = textToCopy;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    tempTextArea.setSelectionRange(0, 99999);
     
     try {
         document.execCommand('copy');
+        document.body.removeChild(tempTextArea);
         
         // Show success feedback
         const button = event.target;
@@ -117,9 +405,67 @@ function copyToClipboard() {
             button.classList.add('bg-blue-600', 'hover:bg-blue-700');
         }, 2000);
     } catch (err) {
+        document.body.removeChild(tempTextArea);
         console.error('Failed to copy text: ', err);
         alert('Failed to copy text. Please select and copy manually.');
     }
+}
+
+function toggleComparison() {
+    const comparisonView = document.getElementById('comparisonView');
+    const singleView = document.getElementById('singleView');
+    const toggleBtn = document.getElementById('toggleView');
+    
+    if (isComparisonView) {
+        // Switch to single view
+        comparisonView.classList.add('hidden');
+        singleView.classList.remove('hidden');
+        toggleBtn.textContent = 'Switch to Comparison';
+        isComparisonView = false;
+        
+        // Set initial single view to anonymized
+        showAnonymizedText();
+    } else {
+        // Switch to comparison view
+        comparisonView.classList.remove('hidden');
+        singleView.classList.add('hidden');
+        toggleBtn.textContent = 'Switch to Single View';
+        isComparisonView = true;
+    }
+}
+
+function showOriginalText() {
+    const singleViewText = document.getElementById('singleViewText');
+    const showOriginalBtn = document.getElementById('showOriginal');
+    const showAnonymizedBtn = document.getElementById('showAnonymized');
+    
+    singleViewText.value = originalText;
+    singleViewText.className = 'w-full h-64 p-4 bg-red-50 border border-red-200 rounded-lg resize-none focus:outline-none text-gray-800';
+    
+    // Update button states
+    showOriginalBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+    showOriginalBtn.classList.remove('text-gray-700', 'hover:bg-white');
+    showAnonymizedBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+    showAnonymizedBtn.classList.add('text-gray-700', 'hover:bg-white');
+    
+    currentSingleView = 'original';
+}
+
+function showAnonymizedText() {
+    const singleViewText = document.getElementById('singleViewText');
+    const showOriginalBtn = document.getElementById('showOriginal');
+    const showAnonymizedBtn = document.getElementById('showAnonymized');
+    
+    singleViewText.value = anonymizedText;
+    singleViewText.className = 'w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800';
+    
+    // Update button states
+    showAnonymizedBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+    showAnonymizedBtn.classList.remove('text-gray-700', 'hover:bg-white');
+    showOriginalBtn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+    showOriginalBtn.classList.add('text-gray-700', 'hover:bg-white');
+    
+    currentSingleView = 'anonymized';
 }
 
 // Print styles
@@ -130,6 +476,7 @@ window.addEventListener('beforeprint', function() {
 window.addEventListener('afterprint', function() {
     document.body.classList.remove('print-mode');
 });
+</script>
 </script>
 
 <style>
