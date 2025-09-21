@@ -37,7 +37,7 @@ app.secret_key = 'your-secret-key-change-in-production'  # For session managemen
 # Try to import LangGraph workflow, fallback to basic pipeline if not available
 try:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-    from graph import anonymize_text
+    #from graph import anonymize_text
     USE_LANGGRAPH = False  # Temporarily disable LangGraph until we fix the hanging issue
     print("⚠️ LangGraph temporarily disabled, using basic pipeline")
 except ImportError:
@@ -296,7 +296,7 @@ def anonymize():
             if USE_LANGGRAPH:
                 # Use LangGraph workflow
                 print(f"🚀 Running LangGraph workflow...")
-                result = anonymize_text(input_text, detector_type=detector_type)
+                #result = anonymize_text(input_text, detector_type=detector_type)
                 print(f"📊 LangGraph result: {result}")
                 
                 # Store results in session for result page
@@ -430,7 +430,7 @@ def anonymize():
                     
                     # Continue with text-based processing for non-document files
                     if USE_LANGGRAPH:
-                        result = anonymize_text(file_content, detector_type=detector_type)
+                        #result = anonymize_text(file_content, detector_type=detector_type)
                         session['anonymization_result'] = {
                             'success': result.get('success', False),
                             'original_text': result.get('original_text', file_content),
