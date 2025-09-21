@@ -13,6 +13,12 @@ from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+import sys
+import os
+
+# Add the src directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from utils.file_processor import extract_text_from_file
 from utils.document_processor import DocumentProcessor
 from agent.executor import AnonymizerPipeline

@@ -1,6 +1,6 @@
-from detectors.spacy_detector import SpacyDetector
-from detectors.llm_detector import LLMDetector
-from replacers.faker_replacer import FakerReplacer
+from .tools.detectors.spacy_detector import SpacyDetector
+from .tools.detectors.llm_detector import LLMDetector
+from .tools.replacers.faker_replacer import FakerReplacer
 
 class AnonymizerPipeline:
     def __init__(self, detector="spacy", replacer=None):
