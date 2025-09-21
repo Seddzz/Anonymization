@@ -1,14 +1,17 @@
-# Document Anonymization Tool
+# Agent-Intelligent Anonymization System
 
-A powerful, privacy-first tool for anonymizing sensitive information in documents and text. Runs entirely on your local machine - your data never leaves your computer.
+An intelligent document anonymization system built with agent-based architecture for detecting and replacing sensitive information in text and documents.
 
 ## ✨ Features
 
+- 🤖 **Agent-Based Architecture** - Intelligent planning and execution
 - 🛡️ **Complete Privacy** - All processing happens locally
-- 🚀 **AI-Powered Detection** - Smart PII detection using spaCy NLP
+- 🚀 **AI-Powered Detection** - Smart PII detection using spaCy NLP and LLM models
 - 📄 **Multi-Format Support** - Text, PDF, and DOCX files
 - ⚡ **Fast & Reliable** - Instant anonymization with realistic replacements
 - 🔒 **Zero Data Retention** - Nothing is stored or transmitted
+- 🌐 **Web Interface** - User-friendly Flask-based interface
+- 🛠️ **REST API** - Programmatic access for integration
 
 ## 📋 Requirements
 

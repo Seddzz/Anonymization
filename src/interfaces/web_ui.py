@@ -325,15 +325,13 @@ def anonymize():
                     'original_text': input_text,
                     'anonymized_text': result['anonymized_text'],
                     'replacement_mapping': result['replacement_mapping'],
-                    'entity_info': result['entity_info'],
+                    'entity_info': result.get('entity_info', {}),
                     'statistics': {
                         'detector_used': detector_type,
                         'entities_found': entities_found,
                         'entities_anonymized': entities_anonymized,
                         'processing_time': '0.5'  # Placeholder for now
                     },
-                    'replacement_mapping': replacement_mapping,
-                    'entity_info': entity_info,  # Add entity type info
                     'error_message': None,
                     'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     'workflow_type': 'Basic Pipeline'

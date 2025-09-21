@@ -45,65 +45,22 @@
         <!-- Tab Navigation -->
         <div class="flex justify-between items-center mb-6">
             <div class="flex space-x-1 sm:space-x-4 border-b flex-wrap sm:flex-nowrap">
-                <button 
-                    onclick="
-                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
-                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
-                        document.getElementById('anonymizedContent').classList.remove('hidden');
-                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
-                    " 
-                    id="anonymizedTab"
-                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600 text-base whitespace-nowrap">
+                <button id="anonymizedTab" class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600 text-base whitespace-nowrap">
                     Result
                 </button>
-                <button 
-                    onclick="
-                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
-                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
-                        document.getElementById('comparisonContent').classList.remove('hidden');
-                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
-                    " 
-                    id="comparisonTab"
-                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                <button id="comparisonTab" class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
                     Compare
                 </button>
-                <button 
-                    onclick="
-                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
-                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
-                        document.getElementById('mappingContent').classList.remove('hidden');
-                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
-                    " 
-                    id="mappingTab"
-                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                <button id="mappingTab" class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
                     Mapping
                 </button>
-                <button 
-                    onclick="
-                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
-                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
-                        document.getElementById('liveeditContent').classList.remove('hidden');
-                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
-                    " 
-                    id="liveeditTab"
-                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                <button id="liveeditTab" class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
                     Live Edit
                 </button>
             </div>
             
             <!-- Copy Button -->
-            <button 
-                onclick="
-                    var textArea = document.getElementById('resultText');
-                    textArea.select();
-                    textArea.setSelectionRange(0, 99999);
-                    document.execCommand('copy');
-                    var btn = this;
-                    var originalText = btn.textContent;
-                    btn.textContent = 'Copied!';
-                    setTimeout(function(){btn.textContent = originalText;}, 2000);
-                " 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center text-sm ml-2 flex-shrink-0">
+            <button id="copyButton" class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center text-sm ml-2 flex-shrink-0">
                 <svg class="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 002 2m0 0h2a2 2 0 012 2v3a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2h2z"/>
                     </svg>
@@ -116,11 +73,7 @@
         <div id="anonymizedContent" class="tab-content">
             <h3 class="text-xl font-semibold text-gray-800 mb-4">Anonymized Content</h3>
             <div class="relative">
-                    <textarea 
-                        id="resultText"
-                        readonly
-                        class="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
-                        >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+                <textarea id="resultText" readonly class="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base">{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
             </div>
         </div>
 
@@ -130,17 +83,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <h4 class="font-medium text-gray-700 mb-2">Original Text</h4>
-                    <textarea 
-                        readonly
-                        class="w-full h-64 p-4 bg-red-50 border border-red-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
-                        >{{ original_text if original_text else 'No original text available' }}</textarea>
+                    <textarea readonly class="w-full h-64 p-4 bg-red-50 border border-red-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base">{{ original_text if original_text else 'No original text available' }}</textarea>
                 </div>
                 <div>
                     <h4 class="font-medium text-gray-700 mb-2">Anonymized Text</h4>
-                    <textarea 
-                        readonly
-                        class="w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
-                        >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+                    <textarea readonly class="w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base">{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
                 </div>
             </div>
         </div>
@@ -193,9 +140,7 @@
                     <div class="space-y-3" id="entityTypeControls">
                         <!-- Person -->
                         <div class="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border">
-                            <input type="checkbox" id="live_person" value="PERSON" 
-                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
-                                   onchange="updateEntitySelection()" checked>
+                            <input type="checkbox" id="live_person" value="PERSON" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
                             <div>
                                 <label for="live_person" class="text-base font-medium text-gray-900">👤 People</label>
                                 <p class="text-sm text-gray-500">Names of individuals</p>
@@ -204,9 +149,7 @@
 
                         <!-- Email -->
                         <div class="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border">
-                            <input type="checkbox" id="live_email" value="EMAIL" 
-                                   class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500" 
-                                   onchange="updateEntitySelection()" checked>
+                            <input type="checkbox" id="live_email" value="EMAIL" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500" checked>
                             <div>
                                 <label for="live_email" class="text-base font-medium text-gray-900">📧 Email Addresses</label>
                                 <p class="text-sm text-gray-500">Email contacts</p>
@@ -215,9 +158,7 @@
 
                         <!-- Organization -->
                         <div class="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg border">
-                            <input type="checkbox" id="live_organization" value="ORGANIZATION" 
-                                   class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
-                                   onchange="updateEntitySelection()" checked>
+                            <input type="checkbox" id="live_organization" value="ORGANIZATION" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" checked>
                             <div>
                                 <label for="live_organization" class="text-base font-medium text-gray-900">🏢 Organizations</label>
                                 <p class="text-sm text-gray-500">Company names</p>
@@ -226,9 +167,7 @@
 
                         <!-- Phone -->
                         <div class="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border">
-                            <input type="checkbox" id="live_phone" value="PHONE" 
-                                   class="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500" 
-                                   onchange="updateEntitySelection()" checked>
+                            <input type="checkbox" id="live_phone" value="PHONE" class="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500" checked>
                             <div>
                                 <label for="live_phone" class="text-base font-medium text-gray-900">📱 Phone Numbers</label>
                                 <p class="text-sm text-gray-500">Contact numbers</p>
@@ -237,9 +176,7 @@
 
                         <!-- Age -->
                         <div class="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg border">
-                            <input type="checkbox" id="live_age" value="AGE" 
-                                   class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" 
-                                   onchange="updateEntitySelection()">
+                            <input type="checkbox" id="live_age" value="AGE" class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
                             <div>
                                 <label for="live_age" class="text-base font-medium text-gray-900">🎂 Ages</label>
                                 <p class="text-sm text-gray-500">Age information</p>
@@ -248,9 +185,7 @@
 
                         <!-- Location -->
                         <div class="flex items-center space-x-3 p-3 bg-red-50 rounded-lg border">
-                            <input type="checkbox" id="live_location" value="LOCATION" 
-                                   class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" 
-                                   onchange="updateEntitySelection()" checked>
+                            <input type="checkbox" id="live_location" value="LOCATION" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" checked>
                             <div>
                                 <label for="live_location" class="text-base font-medium text-gray-900">📍 Locations</label>
                                 <p class="text-sm text-gray-500">Places, addresses</p>
@@ -259,27 +194,13 @@
                     </div>
                     
                     <div class="mt-6 space-y-3">
-                        <button 
-                            onclick="alert('Re-processing functionality to be implemented');"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                        <button id="reprocessButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
                             Re-process with Selection
                         </button>
-                        <button 
-                            onclick="
-                                var checkboxes = document.querySelectorAll('#entityTypeControls input[type=checkbox]');
-                                for(var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = true; }
-                                alert('All entities selected');
-                            "
-                            class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                        <button id="selectAllButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
                             Select All
                         </button>
-                        <button 
-                            onclick="
-                                var checkboxes = document.querySelectorAll('#entityTypeControls input[type=checkbox]');
-                                for(var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = false; }
-                                alert('All entities cleared');
-                            "
-                            class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                        <button id="clearAllButton" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
                             Clear All
                         </button>
                     </div>
@@ -289,11 +210,7 @@
                 <div class="lg:col-span-2">
                     <h4 class="font-semibold text-lg text-gray-700 mb-4">Live Preview</h4>
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <textarea 
-                            id="livePreviewText" 
-                            readonly
-                            class="w-full h-96 p-4 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base leading-relaxed"
-                            >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+                        <textarea id="livePreviewText" readonly class="w-full h-96 p-4 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base leading-relaxed">{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
                     </div>
                     
                     <div class="mt-4 flex justify-between items-center">
@@ -305,22 +222,7 @@
                                 Check/uncheck entities and click "Re-process" to see changes
                             </p>
                         </div>
-                        <button 
-                            onclick="
-                                var textArea = document.getElementById('livePreviewText');
-                                if(textArea) {
-                                    textArea.select();
-                                    textArea.setSelectionRange(0, 99999);
-                                    document.execCommand('copy');
-                                    var btn = this;
-                                    var originalText = btn.textContent;
-                                    btn.textContent = 'Copied!';
-                                    setTimeout(function(){btn.textContent = originalText;}, 2000);
-                                } else {
-                                    alert('No live preview text to copy');
-                                }
-                            "
-                            class="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg font-medium transition-colors">
+                        <button id="copyLiveButton" class="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg font-medium transition-colors">
                             Copy Result
                         </button>
                     </div>
@@ -334,15 +236,13 @@
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{{ url_for('download_file') }}" 
-               class="bg-green-600 hover:bg-green-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors inline-flex items-center justify-center">
+            <a href="{{ url_for('download_file') }}" class="bg-green-600 hover:bg-green-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors inline-flex items-center justify-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 Download Anonymized {{ result.file_type.upper() }}
             </a>
-            <button onclick="alert('Original file download not implemented yet')" 
-               class="bg-gray-600 hover:bg-gray-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
+            <button onclick="alert('Original file download not implemented yet')" class="bg-gray-600 hover:bg-gray-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
                 Download Original
             </button>
         </div>
@@ -360,196 +260,22 @@
     </div>
 </div>
 
-<!-- JavaScript for copy functionality and tabs -->
-<script>
-// Simple, direct tab functionality
-function showTab(tabName) {
-    console.log('Switching to tab:', tabName);
-    
-    // Hide all tab contents
-    var contents = document.getElementsByClassName('tab-content');
-    for (var i = 0; i < contents.length; i++) {
-        contents[i].style.display = 'none';
-        contents[i].classList.add('hidden');
-    }
-    
-    // Reset all tab buttons
-    var buttons = document.getElementsByClassName('tab-button');
-    for (var i = 0; i < buttons.length; i++) {
-        buttons[i].classList.remove('border-blue-600', 'text-blue-600');
-        buttons[i].classList.add('border-transparent', 'text-gray-500');
-    }
-    
-    // Show selected tab
-    var targetContent = document.getElementById(tabName + 'Content');
-    if (targetContent) {
-        targetContent.style.display = 'block';
-        targetContent.classList.remove('hidden');
-        console.log('Showed tab:', tabName + 'Content');
-    }
-    
-    // Activate selected button
-    var targetButton = document.getElementById(tabName + 'Tab');
-    if (targetButton) {
-        targetButton.classList.add('border-blue-600', 'text-blue-600');
-        targetButton.classList.remove('border-transparent', 'text-gray-500');
-        console.log('Activated button:', tabName + 'Tab');
-    }
-}
-
-// Initialize when page loads
-window.addEventListener('load', function() {
-    console.log('Page loaded - initializing tabs');
-    showTab('anonymized');
-});
-
-// Make function globally available
-window.showTab = showTab;
-
-// Initialize original mapping data from server
-var originalMapping = {};
-{% if changes and changes|length > 0 %}
-{% for change in changes %}
-originalMapping['{{ change.original|replace("'", "\\'") }}'] = '{{ change.replacement|replace("'", "\\'") }}';
-{% endfor %}
-{% endif %}
-
-// Original anonymized text for live editing
-var originalText = {{ result.anonymized_text|tojson if result.anonymized_text else '""' }};
-
-function copyToClipboard() {
-    const textArea = document.getElementById('resultText');
-    textArea.select();
-    textArea.setSelectionRange(0, 99999); // For mobile devices
-    
-    try {
-        document.execCommand('copy');
-        
-        // Show success feedback
-        const button = event.target;
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        button.classList.add('bg-green-600');
-        button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        
-        setTimeout(() => {
-            button.textContent = originalText;
-            button.classList.remove('bg-green-600');
-            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        }, 2000);
-    } catch (err) {
-        console.error('Failed to copy text: ', err);
-        alert('Failed to copy text. Please select and copy manually.');
-    }
-}
-
-// Live Edit functionality for entity selection
-let sourceText = `{{ original_text|replace('`', '\\`')|replace('\\', '\\\\')|replace('\n', '\\n')|replace('\r', '') if original_text else '' }}`;
-let currentWorkflowType = '{{ result.workflow_type if result.workflow_type else "Unknown" }}';
-
-function updateEntitySelection() {
-    // Visual feedback - could add preview logic here
-    console.log('Entity selection updated');
-}
-
-function selectAllEntities() {
-    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]');
-    checkboxes.forEach(cb => cb.checked = true);
-    updateEntitySelection();
-}
-
-function clearAllEntities() {
-    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]');
-    checkboxes.forEach(cb => cb.checked = false);
-    updateEntitySelection();
-}
-
-function getSelectedEntityTypes() {
-    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
-}
-
-function reprocessWithSelection() {
-    const selectedTypes = getSelectedEntityTypes();
-    
-    if (selectedTypes.length === 0) {
-        alert('Please select at least one entity type to anonymize.');
-        return;
-    }
-    
-    // Show loading state
-    const button = event.target;
-    const originalButtonText = button.textContent;
-    button.textContent = 'Processing...';
-    button.disabled = true;
-    
-    // Determine detection method from current workflow
-    let detectionMethod = 'spacy'; // default
-    if (currentWorkflowType.toLowerCase().includes('llm')) {
-        detectionMethod = 'llm';
-    }
-    
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('text', sourceText);
-    formData.append('detection_method', detectionMethod);
-    selectedTypes.forEach(type => {
-        formData.append('entity_types', type);
-    });
-    
-    // Send request to reprocess
-    fetch('/custom-anonymize', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (response.redirected) {
-            // Backend redirects to result page on success
-            window.location.href = response.url;
-        } else {
-            return response.json();
-        }
-    })
-    .then(data => {
-        if (data && !data.success) {
-            alert('Error: ' + (data.error || 'Unknown error occurred'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while reprocessing. Please try again.');
-    })
-    .finally(() => {
-        // Restore button state
-        button.textContent = originalButtonText;
-        button.disabled = false;
-    });
-}
-
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function copyLiveResult() {
-    const liveText = document.getElementById('livePreviewText');
-    liveText.select();
-    liveText.setSelectionRange(0, 99999);
-    
-    try {
-        document.execCommand('copy');
-        
-        // Show success feedback
-        const button = event.target;
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 2000);
-    } catch (err) {
-        console.error('Failed to copy live result: ', err);
-        alert('Failed to copy text. Please select and copy manually.');
-    }
+<!-- Template data for JavaScript -->
+<script id="template-data" type="application/json">
+{
+    "originalMapping": {
+        {% if changes and changes|length > 0 %}
+        {% for change in changes %}
+        {{ change.original|tojson }}: {{ change.replacement|tojson }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+        {% endif %}
+    },
+    "originalText": {{ result.anonymized_text|tojson if result.anonymized_text else '""' }},
+    "sourceText": {{ original_text|tojson if original_text else '""' }},
+    "currentWorkflowType": {{ result.workflow_type|tojson if result.workflow_type else '"Unknown"' }}
 }
 </script>
+
+<!-- External JavaScript file -->
+<script src="{{ url_for('static', filename='js/result.js') }}"></script>
 {% endblock %}

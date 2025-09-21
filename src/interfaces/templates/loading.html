@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Processing - SecureDoc{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-lg mx-auto text-center">
+    <div class="bg-white rounded-xl shadow-lg p-12">
+        
+        <!-- Loading Animation -->
+        <div class="mb-8">
+            <div class="w-16 h-16 mx-auto mb-6 bg-blue-600 rounded-full flex items-center justify-center">
+                <div class="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-3">Processing Your Document</h2>
+            <p class="text-gray-600">
+                Securely analyzing and removing personal information...
+            </p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="space-y-4 mb-8 text-left">
+            <div id="step1" class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                <span class="text-sm text-gray-700">📄 Document received</span>
+                <span class="text-green-600">✓</span>
+            </div>
+            <div id="step2" class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <span class="text-sm text-gray-700">🔍 Detecting sensitive data</span>
+                <div class="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+            </div>
+            <div id="step3" class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-50">
+                <span class="text-sm text-gray-500">🔒 Anonymizing content</span>
+                <span class="text-gray-400">⏳</span>
+            </div>
+            <div id="step4" class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-50">
+                <span class="text-sm text-gray-500">✨ Finalizing results</span>
+                <span class="text-gray-400">⏳</span>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 25%"></div>
+        </div>
+
+        <!-- Privacy Reminder -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <span class="font-medium text-blue-800">Your Privacy Matters</span>
+            </div>
+            <p class="text-sm text-blue-700">
+                Your document is being processed locally and securely. No data is stored after processing.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-progress simulation for demo purposes -->
+<script>
+    let currentStep = 1;
+    let progress = 25;
+    
+    function simulateProgress() {
+        if (currentStep < 4) {
+            setTimeout(() => {
+                currentStep++;
+                progress = currentStep * 25;
+                
+                // Update previous step to completed
+                const prevStep = document.getElementById(`step${currentStep-1}`);
+                prevStep.classList.remove('bg-blue-50', 'border-blue-200');
+                prevStep.classList.add('bg-green-50', 'border-green-200');
+                prevStep.querySelector('div').innerHTML = '<span class="text-green-600">✓</span>';
+                
+                // Activate current step
+                const currentStepElement = document.getElementById(`step${currentStep}`);
+                currentStepElement.classList.remove('opacity-50', 'bg-gray-50', 'border-gray-200');
+                currentStepElement.classList.add('bg-blue-50', 'border-blue-200');
+                currentStepElement.querySelector('span:last-child').innerHTML = '<div class="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>';
+                
+                // Update progress bar
+                document.getElementById('progressBar').style.width = `${progress}%`;
+                
+                simulateProgress();
+            }, 2000);
+        } else {
+            // Final step completion
+            setTimeout(() => {
+                const finalStep = document.getElementById('step4');
+                finalStep.classList.remove('bg-blue-50', 'border-blue-200');
+                finalStep.classList.add('bg-green-50', 'border-green-200');
+                finalStep.querySelector('span:last-child').innerHTML = '<span class="text-green-600">✓</span>';
+                
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('progressBar').classList.add('bg-green-600');
+            }, 1500);
+        }
+    }
+    
+    // Start the simulation
+    simulateProgress();
+</script>
+{% endblock %}

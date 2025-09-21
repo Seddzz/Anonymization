@@ -1,0 +1,4 @@
+2025-09-21 22:00:00 - INFO - Agent-intelligent anonymization system initialized
+2025-09-21 22:00:01 - INFO - Configuration loaded successfully
+2025-09-21 22:00:02 - INFO - Flask web interface started on port 5000
+2025-09-21 22:00:03 - INFO - System ready for anonymization tasks
