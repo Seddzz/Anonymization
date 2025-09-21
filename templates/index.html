@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}SecureDoc - Document Anonymization Tool{% endblock %}
+{% block title %}SecureDoc - Doc                <!-- Detection Method Selection for File Upload -->
+                <div class="mb-4">
+                    <label class="block text-base font-medium text-gray-700 mb-2">Detection Method:</label>
+                    <div class="flex space-x-6">
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="spacy" checked class="mr-2">
+                            <span class="text-base text-gray-700">SpaCy (Fast)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="llm" class="mr-2">
+                            <span class="text-base text-gray-700">LLM/Mistral (Advanced)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div 
+                    id="dropzone"on Tool{% endblock %}
 
 {% block content %}
 <div class="w-full max-w-4xl mx-auto text-center">
@@ -8,13 +24,29 @@
     <!-- Logo and Header Section -->
     <div class="mb-12">
         <!-- Privacy Shield Icon -->
-        <div class="mx-auto w-24 h-24 mb-6 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
+        <div class="flex justify-center mb-6">
+            <img src="../static/assets/logo2.png" alt="SecureDoc Logo" class="max-w-xs">
         </div>
-        <h1 class="text-4xl font-bold text-gray-800 mb-4">SecureDoc</h1>
-        <p class="text-xl text-gray-600 mb-8">Protect your privacy with secure document anonymization</p>
+        <p class="text-3xl text-gray-600 mb-8">Protect your privacy with secure document anonymization</p>
+    </div>
+
+    <!-- Mode Selection -->
+    <div class="flex justify-center mb-8">
+        <div class="bg-white rounded-lg shadow-md p-4 flex space-x-4">
+            <div class="text-center">
+                <div class="bg-blue-100 text-blue-600 px-6 py-3 rounded-lg font-medium text-lg">
+                    🚀 Simple Mode
+                </div>
+                <p class="text-sm text-gray-500 mt-1">Quick anonymization</p>
+            </div>
+            <div class="text-center">
+                <a href="{{ url_for('entity_selection') }}" 
+                   class="bg-gray-100 text-gray-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors text-lg">
+                    ⚙️ Custom Mode
+                </a>
+                <p class="text-sm text-gray-500 mt-1">Choose what to detect</p>
+            </div>
+        </div>
     </div>
 
     <!-- Main Content Area -->
@@ -22,20 +54,34 @@
         
         <!-- Text Input Section -->
         <div class="mb-8">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Enter Text to Anonymize</h2>
+            <h2 class="text-3xl font-semibold text-gray-700 mb-6">Enter Text to Anonymize</h2>
             <form id="textForm" action="/anonymize" method="POST" class="space-y-4">
-                <input type="hidden" name="detector" id="textDetector" value="spacy">
+                
+                <!-- Detection Method Selection -->
+                <div class="mb-4">
+                    <label class="block text-base font-medium text-gray-700 mb-2">Detection Method:</label>
+                    <div class="flex space-x-6">
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="spacy" checked class="mr-2">
+                            <span class="text-base text-gray-700">SpaCy (Fast)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="llm" class="mr-2">
+                            <span class="text-base text-gray-700">LLM/Mistral (Advanced)</span>
+                        </label>
+                    </div>
+                </div>
                 
                 <div class="relative">
                     <textarea 
                         name="text"
                         id="textInput"
                         placeholder="Enter your text here and we'll remove any personal information..."
-                        class="w-full h-32 p-4 border-2 border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-500 transition-colors"
+                        class="w-full h-40 p-5 border-2 border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-500 transition-colors text-lg"
                         >{{ request.form.text if request.form.text }}</textarea>
                     <button 
                         type="submit"
-                        class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-8 rounded-lg font-semibold transition-colors text-lg"
                         id="textSubmitBtn">
                         Anonymize Text
                     </button>
@@ -45,8 +91,23 @@
 
         <!-- File Upload Section -->
         <div class="border-t pt-8">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Upload Document to Anonymize</h2>
+            <h2 class="text-3xl font-semibold text-gray-700 mb-6">Upload Document to Anonymize</h2>
             <form id="fileForm" action="/anonymize" method="POST" enctype="multipart/form-data">
+                
+                <!-- Detection Method Selection for File Upload -->
+                <div class="mb-6">
+                    <label class="block text-lg font-medium text-gray-700 mb-3">Detection Method:</label>
+                    <div class="flex space-x-6">
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="spacy" checked class="mr-3">
+                            <span class="text-lg text-gray-700">SpaCy (Fast)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="detector" value="llm" class="mr-3">
+                            <span class="text-lg text-gray-700">LLM/Mistral (Advanced)</span>
+                        </label>
+                    </div>
+                </div>
                 
                 <div 
                     id="dropzone"
@@ -57,8 +118,8 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                             </svg>
                         </div>
-                        <p class="text-lg font-medium mb-2 text-gray-700">Drop your file here or click to browse</p>
-                        <p class="text-gray-500 text-sm">TXT, DOCX, PDF • Maximum 10MB</p>
+                        <p class="text-2xl font-medium mb-3 text-gray-700">Drop your file here or click to browse</p>
+                        <p class="text-gray-500 text-lg">TXT, DOCX, PDF • Maximum 10MB</p>
                     </div>
                 </div>
                 
@@ -72,7 +133,7 @@
                 <button 
                     type="submit"
                     id="uploadBtn"
-                    class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    class="w-full mt-8 bg-green-600 hover:bg-green-700 text-white py-4 px-8 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-lg"
                     disabled>
                     Upload & Anonymize Document
                 </button>
@@ -111,18 +172,6 @@
             <h3 class="font-semibold text-gray-800 mb-2">Multi-Format</h3>
             <p class="text-gray-600 text-sm">Support for text, PDF, and DOCX files</p>
         </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="text-center">
-        <a href="https://github.com/Seddzz" 
-           target="_blank" 
-           class="inline-flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">
-            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"/>
-            </svg>
-            Built by Seddz
-        </a>
     </div>
 </div>
 

@@ -188,6 +188,149 @@ class DocumentProcessor:
                 'error': f'Unsupported file type: {file_type}'
             }
 
+    def process_file_with_entities(self, file_path, file_type=None, entity_types=None):
+        """
+        Process any supported file type with custom entity selection
+        """
+        if file_type is None:
+            file_type = file_path.split('.')[-1].lower()
+        
+        if file_type == 'pdf':
+            return self.anonymize_pdf_with_entities(file_path, entity_types)
+        elif file_type in ['docx', 'doc']:
+            return self.anonymize_docx_with_entities(file_path, entity_types)
+        elif file_type == 'txt':
+            return self.anonymize_txt_with_entities(file_path, entity_types)
+        else:
+            return {
+                'success': False,
+                'error': f'Unsupported file type: {file_type}'
+            }
+
+    def anonymize_txt_with_entities(self, file_path, entity_types, output_path=None):
+        """
+        Anonymize a TXT file with custom entity selection
+        """
+        try:
+            # Read the file
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            
+            # Anonymize with custom entity types
+            result = self.pipeline.anonymize(content, entity_types)
+            
+            # Generate output path if not provided
+            if output_path is None:
+                base_name = os.path.splitext(file_path)[0]
+                output_path = f"{base_name}_anonymized.txt"
+            
+            # Write anonymized content
+            with open(output_path, 'w', encoding='utf-8') as file:
+                file.write(result['anonymized_text'])
+            
+            return {
+                'success': True,
+                'original_text': content,
+                'anonymized_text': result['anonymized_text'],
+                'replacement_mapping': result['replacement_mapping'],
+                'entity_info': result.get('entity_info', {}),
+                'output_path': output_path
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Error processing TXT file: {str(e)}'
+            }
+
+    def anonymize_docx_with_entities(self, file_path, entity_types, output_path=None):
+        """
+        Anonymize a DOCX file with custom entity selection while preserving formatting
+        """
+        try:
+            # Load the document
+            doc = Document(file_path)
+            
+            # Extract full text for detection
+            full_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            
+            # Anonymize with custom entity types using the pipeline
+            replacement_result = self.pipeline.anonymize(full_text, entity_types)
+            replacement_mapping = replacement_result['replacement_mapping']
+            
+            # Apply replacements to each paragraph
+            for paragraph in doc.paragraphs:
+                original_text = paragraph.text
+                new_text = original_text
+                
+                # Apply all replacements
+                for original, replacement in replacement_mapping.items():
+                    new_text = new_text.replace(original, replacement)
+                
+                # Update paragraph text if changed
+                if new_text != original_text:
+                    paragraph.text = new_text
+            
+            # Generate output path if not provided
+            if output_path is None:
+                base_name = os.path.splitext(file_path)[0]
+                output_path = f"{base_name}_anonymized.docx"
+            
+            # Save the modified document
+            doc.save(output_path)
+            
+            return {
+                'success': True,
+                'original_text': full_text,
+                'anonymized_text': replacement_result['anonymized_text'],
+                'replacement_mapping': replacement_mapping,
+                'entity_info': replacement_result.get('entity_info', {}),
+                'output_path': output_path
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Error processing DOCX file: {str(e)}'
+            }
+
+    def anonymize_pdf_with_entities(self, file_path, entity_types, output_path=None):
+        """
+        Anonymize a PDF file with custom entity selection
+        """
+        try:
+            # Extract text from PDF
+            with pdfplumber.open(file_path) as pdf:
+                text_content = ""
+                for page in pdf.pages:
+                    text_content += page.extract_text() + "\n"
+            
+            # Anonymize with custom entity types
+            result = self.pipeline.anonymize(text_content, entity_types)
+            
+            # Generate output path if not provided
+            if output_path is None:
+                base_name = os.path.splitext(file_path)[0]
+                output_path = f"{base_name}_anonymized.pdf"
+            
+            # Create new PDF with anonymized text
+            self._create_pdf_from_text(result['anonymized_text'], output_path)
+            
+            return {
+                'success': True,
+                'original_text': text_content,
+                'anonymized_text': result['anonymized_text'],
+                'replacement_mapping': result['replacement_mapping'],
+                'entity_info': result.get('entity_info', {}),
+                'output_path': output_path
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Error processing PDF file: {str(e)}'
+            }
+
     def _create_pdf_from_text(self, text, output_path):
         """
         Create a professional PDF from text content using ReportLab

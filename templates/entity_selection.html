@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Entity Selection - SecureDoc{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-800 mb-3">Customize Entity Detection</h1>
+        <p class="text-gray-600 text-xl">Select which types of personal information you want to detect and anonymize</p>
+    </div>
+
+    <form action="{{ url_for('custom_anonymize') }}" method="post" enctype="multipart/form-data" class="space-y-8">
+        
+        <!-- Entity Type Selection -->
+        <div class="bg-gray-50 rounded-lg p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-5">📋 Select Entity Types to Detect</h2>
+            <p class="text-gray-600 mb-6 text-lg">Choose which types of information you want to anonymize in your document:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Person Names -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="person" name="entity_types" value="PERSON" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                    <div>
+                        <label for="person" class="text-base font-medium text-gray-900">👤 Person Names</label>
+                        <p class="text-sm text-gray-500">John Smith, أحمد محمد</p>
+                    </div>
+                </div>
+
+                <!-- Email Addresses -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="email" name="entity_types" value="EMAIL" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                    <div>
+                        <label for="email" class="text-base font-medium text-gray-900">📧 Email Addresses</label>
+                        <p class="text-sm text-gray-500">user@example.com</p>
+                    </div>
+                </div>
+
+                <!-- Organizations -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="organization" name="entity_types" value="ORGANIZATION" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                    <div>
+                        <label for="organization" class="text-base font-medium text-gray-900">🏢 Organizations</label>
+                        <p class="text-sm text-gray-500">Microsoft, مايكروسوفت</p>
+                    </div>
+                </div>
+
+                <!-- Phone Numbers -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="phone" name="entity_types" value="PHONE" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
+                    <div>
+                        <label for="phone" class="text-base font-medium text-gray-900">📱 Phone Numbers</label>
+                        <p class="text-sm text-gray-500">+1-555-0123, 966501234567</p>
+                    </div>
+                </div>
+
+                <!-- Ages -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="age" name="entity_types" value="AGE" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <div>
+                        <label for="age" class="text-base font-medium text-gray-900">🎂 Ages</label>
+                        <p class="text-sm text-gray-500">25 years old, 32 سنة</p>
+                    </div>
+                </div>
+
+                <!-- Locations -->
+                <div class="flex items-center space-x-3 p-3 bg-white rounded-lg border">
+                    <input type="checkbox" id="location" name="entity_types" value="LOCATION" 
+                           class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <div>
+                        <label for="location" class="text-base font-medium text-gray-900">📍 Locations</label>
+                        <p class="text-sm text-gray-500">New York, الرياض</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Select All/None buttons -->
+            <div class="mt-6 flex space-x-4">
+                <button type="button" onclick="selectAll()" 
+                        class="px-6 py-3 text-base text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 font-medium">
+                    Select All
+                </button>
+                <button type="button" onclick="selectNone()" 
+                        class="px-6 py-3 text-base text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+                    Select None
+                </button>
+            </div>
+        </div>
+
+        <!-- Detection Method Selection -->
+        <div class="bg-gray-50 rounded-lg p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-5">🔍 Detection Method</h2>
+            <p class="text-gray-600 mb-5 text-lg">Choose which detection method to use:</p>
+            
+            <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                    <input type="radio" id="llm_method" name="detection_method" value="llm" 
+                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
+                    <div>
+                        <label for="llm_method" class="text-base font-medium text-gray-900">🤖 AI Language Model (LLM)</label>
+                        <p class="text-sm text-gray-500">Best for multilingual text (Arabic, English, French, etc.)</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <input type="radio" id="spacy_method" name="detection_method" value="spacy" 
+                           class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                    <div>
+                        <label for="spacy_method" class="text-base font-medium text-gray-900">⚡ SpaCy NLP</label>
+                        <p class="text-sm text-gray-500">Faster, primarily for English text</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Method Selection -->
+        <div class="bg-gray-50 rounded-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">📝 Choose Input Method</h2>
+            
+            <!-- Input Type Tabs -->
+            <div class="mb-6">
+                <div class="flex border-b border-gray-200">
+                    <button type="button" onclick="showTextInput()" id="textTab" 
+                            class="py-3 px-6 border-b-2 border-blue-500 text-blue-600 font-medium text-lg">
+                        💬 Text Input
+                    </button>
+                    <button type="button" onclick="showFileInput()" id="fileTab" 
+                            class="py-3 px-6 border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-lg">
+                        📎 File Upload
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Text Input Section -->
+            <div id="textInputSection" class="space-y-4">
+                <div>
+                    <label for="custom_text" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter text to anonymize:
+                    </label>
+                    <textarea 
+                        name="text"
+                        id="custom_text"
+                        placeholder="Enter your text here and we'll remove the selected entity types..."
+                        class="w-full h-32 p-4 border-2 border-gray-200 rounded-lg resize-none focus:outline-none focus:border-blue-500 transition-colors"
+                        ></textarea>
+                </div>
+            </div>
+            
+            <!-- File Upload Section -->
+            <div id="fileInputSection" class="hidden space-y-4">
+                <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <div id="dropzoneContent" class="space-y-2">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="text-gray-600">
+                            <label for="file-upload" class="cursor-pointer">
+                                <span class="mt-2 block text-lg font-medium text-blue-600 hover:text-blue-500">
+                                    Choose a file or drag and drop here
+                                </span>
+                                <input id="file-upload" name="file" type="file" class="sr-only" 
+                                       accept=".txt,.pdf,.docx">
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">TXT, PDF, or DOCX up to 10MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center pt-6">
+            <a href="{{ url_for('index') }}" 
+               class="px-8 py-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-lg font-medium">
+                ← Back to Simple Mode
+            </a>
+            
+            <button type="submit" id="submitBtn"
+                    class="px-10 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg">
+                🚀 Anonymize with Custom Settings
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectAll() {
+    document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+function selectNone() {
+    document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function showTextInput() {
+    // Update tab appearance
+    document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
+    document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    // Show/hide sections
+    document.getElementById('textInputSection').classList.remove('hidden');
+    document.getElementById('fileInputSection').classList.add('hidden');
+    
+    // Update submit button
+    document.getElementById('submitBtn').textContent = '🚀 Anonymize Text with Custom Settings';
+    
+    // Clear file input and make text required
+    document.getElementById('file-upload').value = '';
+    document.getElementById('file-upload').removeAttribute('required');
+    document.getElementById('custom_text').setAttribute('required', 'required');
+}
+
+function showFileInput() {
+    // Update tab appearance
+    document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
+    document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    
+    // Show/hide sections
+    document.getElementById('fileInputSection').classList.remove('hidden');
+    document.getElementById('textInputSection').classList.add('hidden');
+    
+    // Update submit button
+    document.getElementById('submitBtn').textContent = '🚀 Anonymize File with Custom Settings';
+    
+    // Clear text input and make file required
+    document.getElementById('custom_text').value = '';
+    document.getElementById('custom_text').removeAttribute('required');
+    document.getElementById('file-upload').setAttribute('required', 'required');
+}
+
+// File upload preview
+document.getElementById('file-upload').addEventListener('change', function(e) {
+    updateFileDisplay(e.target.files[0]);
+});
+
+function updateFileDisplay(file) {
+    if (file) {
+        const label = document.querySelector('label[for="file-upload"] span');
+        label.textContent = `Selected: ${file.name}`;
+        label.classList.add('text-green-600');
+        
+        // Update dropzone to show file selected
+        const dropzone = document.getElementById('dropzone');
+        dropzone.classList.add('border-green-400', 'bg-green-50');
+        dropzone.classList.remove('border-gray-300');
+    }
+}
+
+// Drag and Drop functionality
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-upload');
+
+// Prevent default drag behaviors
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+// Highlight drop area when item is dragged over it
+['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, unhighlight, false);
+});
+
+// Handle dropped files
+dropzone.addEventListener('drop', handleDrop, false);
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function highlight(e) {
+    dropzone.classList.add('border-blue-500', 'bg-blue-50');
+    dropzone.classList.remove('border-gray-300');
+}
+
+function unhighlight(e) {
+    dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+    dropzone.classList.add('border-gray-300');
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Check file type
+        const allowedTypes = ['.txt', '.pdf', '.docx', '.doc'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (allowedTypes.includes(fileExtension)) {
+            // Set the file to the input
+            fileInput.files = files;
+            
+            // Update display
+            updateFileDisplay(file);
+            
+            // Switch to file input mode if not already
+            if (document.getElementById('fileInputSection').classList.contains('hidden')) {
+                showFileInput();
+            }
+        } else {
+            alert('Please select a valid file type: TXT, PDF, or DOCX');
+        }
+    }
+}
+
+// Initialize with text input active
+document.addEventListener('DOMContentLoaded', function() {
+    showTextInput();
+});
+</script>
+{% endblock %}

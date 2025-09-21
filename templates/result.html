@@ -12,8 +12,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
         </div>
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Document Anonymized Successfully!</h1>
-        <p class="text-gray-600">Your personal information has been safely removed</p>
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Document Anonymized Successfully!</h1>
+        <p class="text-lg text-gray-600">Your personal information has been safely removed</p>
         
         {% if result.message %}
         <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -25,41 +25,307 @@
     <!-- Stats Summary -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white rounded-lg p-6 shadow text-center">
-            <div class="text-3xl font-bold text-blue-600 mb-2">{{ stats.entities_found if stats else '0' }}</div>
-            <div class="text-sm text-gray-600">Personal Items Found</div>
+            <div class="text-4xl font-bold text-blue-600 mb-2">{{ stats.entities_found if stats else '0' }}</div>
+            <div class="text-base text-gray-600">Personal Items Found</div>
         </div>
         
         <div class="bg-white rounded-lg p-6 shadow text-center">
-            <div class="text-3xl font-bold text-green-600 mb-2">{{ stats.entities_anonymized if stats else '0' }}</div>
-            <div class="text-sm text-gray-600">Items Anonymized</div>
+            <div class="text-4xl font-bold text-green-600 mb-2">{{ stats.entities_anonymized if stats else '0' }}</div>
+            <div class="text-base text-gray-600">Items Anonymized</div>
         </div>
         
         <div class="bg-white rounded-lg p-6 shadow text-center">
-            <div class="text-3xl font-bold text-purple-600 mb-2">{{ "%.1f"|format(stats.processing_time) if stats else '0.0' }}s</div>
-            <div class="text-sm text-gray-600">Processing Time</div>
+            <div class="text-4xl font-bold text-purple-600 mb-2">{{ "%.1f"|format(stats.processing_time|float) if stats and stats.processing_time else '0.0' }}s</div>
+            <div class="text-base text-gray-600">Processing Time</div>
         </div>
     </div>
 
     <!-- Results Display -->
     <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+        <!-- Tab Navigation -->
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Anonymized Content</h2>
+            <div class="flex space-x-1 sm:space-x-4 border-b flex-wrap sm:flex-nowrap">
+                <button 
+                    onclick="
+                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
+                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
+                        document.getElementById('anonymizedContent').classList.remove('hidden');
+                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
+                    " 
+                    id="anonymizedTab"
+                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-blue-600 text-blue-600 text-base whitespace-nowrap">
+                    Result
+                </button>
+                <button 
+                    onclick="
+                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
+                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
+                        document.getElementById('comparisonContent').classList.remove('hidden');
+                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
+                    " 
+                    id="comparisonTab"
+                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                    Compare
+                </button>
+                <button 
+                    onclick="
+                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
+                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
+                        document.getElementById('mappingContent').classList.remove('hidden');
+                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
+                    " 
+                    id="mappingTab"
+                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                    Mapping
+                </button>
+                <button 
+                    onclick="
+                        document.querySelectorAll('.tab-content').forEach(function(el){el.classList.add('hidden')});
+                        document.querySelectorAll('.tab-button').forEach(function(el){el.classList.remove('border-blue-600','text-blue-600');el.classList.add('border-transparent','text-gray-500')});
+                        document.getElementById('liveeditContent').classList.remove('hidden');
+                        this.classList.add('border-blue-600','text-blue-600');this.classList.remove('border-transparent','text-gray-500');
+                    " 
+                    id="liveeditTab"
+                    class="tab-button px-2 sm:px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-base whitespace-nowrap">
+                    Live Edit
+                </button>
+            </div>
             
             <!-- Copy Button -->
             <button 
-                onclick="copyToClipboard()" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Copy Result
+                onclick="
+                    var textArea = document.getElementById('resultText');
+                    textArea.select();
+                    textArea.setSelectionRange(0, 99999);
+                    document.execCommand('copy');
+                    var btn = this;
+                    var originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(function(){btn.textContent = originalText;}, 2000);
+                " 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center text-sm ml-2 flex-shrink-0">
+                <svg class="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 002 2m0 0h2a2 2 0 012 2v3a2 2 0 01-2 2H9a2 2 0 01-2-2V8a2 2 0 012-2h2z"/>
+                    </svg>
+                <span class="hidden sm:inline">Copy Result</span>
+                <span class="sm:hidden">Copy</span>
             </button>
         </div>
         
-        <!-- Anonymized Text Display -->
-        <div class="relative">
-            <textarea 
-                id="resultText" 
-                readonly
-                class="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800"
-                >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+        <!-- Anonymized Result Tab -->
+        <div id="anonymizedContent" class="tab-content">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Anonymized Content</h3>
+            <div class="relative">
+                    <textarea 
+                        id="resultText"
+                        readonly
+                        class="w-full h-64 p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
+                        >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+            </div>
+        </div>
+
+        <!-- Comparison Tab -->
+        <div id="comparisonContent" class="tab-content hidden">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Side-by-Side Comparison</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">Original Text</h4>
+                    <textarea 
+                        readonly
+                        class="w-full h-64 p-4 bg-red-50 border border-red-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
+                        >{{ original_text if original_text else 'No original text available' }}</textarea>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">Anonymized Text</h4>
+                    <textarea 
+                        readonly
+                        class="w-full h-64 p-4 bg-green-50 border border-green-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base"
+                        >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variable Mapping Tab -->
+        <div id="mappingContent" class="tab-content hidden">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Detailed Variable Mapping</h3>
+            {% if changes and changes|length > 0 %}
+                <div class="space-y-3">
+                    {% for change in changes %}
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                        <div class="flex items-center space-x-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                {% if change.type == 'PERSON' %}bg-blue-100 text-blue-800
+                                {% elif change.type == 'EMAIL' %}bg-green-100 text-green-800
+                                {% elif change.type == 'ORGANIZATION' %}bg-purple-100 text-purple-800
+                                {% elif change.type == 'AGE' %}bg-yellow-100 text-yellow-800
+                                {% elif change.type == 'LOCATION' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ change.type }}
+                            </span>
+                            <span class="font-mono text-base text-red-600 bg-red-50 px-3 py-1 rounded">{{ change.original }}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                            </svg>
+                            <span class="font-mono text-base text-green-600 bg-green-50 px-3 py-1 rounded">{{ change.replacement }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8 text-gray-500">
+                    <p class="text-lg">No entities were anonymized</p>
+                    <p class="text-sm">No sensitive information was detected in the text</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Live Edit Tab -->
+        <div id="liveeditContent" class="tab-content hidden">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Live Edit - Adjust Entity Selection</h3>
+            <p class="text-lg text-gray-600 mb-6">Select which types of entities to anonymize and re-process without re-entering text!</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Panel: Entity Selection -->
+                <div class="lg:col-span-1">
+                    <h4 class="font-semibold text-lg text-gray-700 mb-4">Select Entity Types</h4>
+                    <div class="space-y-3" id="entityTypeControls">
+                        <!-- Person -->
+                        <div class="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border">
+                            <input type="checkbox" id="live_person" value="PERSON" 
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
+                                   onchange="updateEntitySelection()" checked>
+                            <div>
+                                <label for="live_person" class="text-base font-medium text-gray-900">👤 People</label>
+                                <p class="text-sm text-gray-500">Names of individuals</p>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border">
+                            <input type="checkbox" id="live_email" value="EMAIL" 
+                                   class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500" 
+                                   onchange="updateEntitySelection()" checked>
+                            <div>
+                                <label for="live_email" class="text-base font-medium text-gray-900">📧 Email Addresses</label>
+                                <p class="text-sm text-gray-500">Email contacts</p>
+                            </div>
+                        </div>
+
+                        <!-- Organization -->
+                        <div class="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg border">
+                            <input type="checkbox" id="live_organization" value="ORGANIZATION" 
+                                   class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                                   onchange="updateEntitySelection()" checked>
+                            <div>
+                                <label for="live_organization" class="text-base font-medium text-gray-900">🏢 Organizations</label>
+                                <p class="text-sm text-gray-500">Company names</p>
+                            </div>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border">
+                            <input type="checkbox" id="live_phone" value="PHONE" 
+                                   class="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500" 
+                                   onchange="updateEntitySelection()" checked>
+                            <div>
+                                <label for="live_phone" class="text-base font-medium text-gray-900">📱 Phone Numbers</label>
+                                <p class="text-sm text-gray-500">Contact numbers</p>
+                            </div>
+                        </div>
+
+                        <!-- Age -->
+                        <div class="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg border">
+                            <input type="checkbox" id="live_age" value="AGE" 
+                                   class="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" 
+                                   onchange="updateEntitySelection()">
+                            <div>
+                                <label for="live_age" class="text-base font-medium text-gray-900">🎂 Ages</label>
+                                <p class="text-sm text-gray-500">Age information</p>
+                            </div>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="flex items-center space-x-3 p-3 bg-red-50 rounded-lg border">
+                            <input type="checkbox" id="live_location" value="LOCATION" 
+                                   class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" 
+                                   onchange="updateEntitySelection()" checked>
+                            <div>
+                                <label for="live_location" class="text-base font-medium text-gray-900">📍 Locations</label>
+                                <p class="text-sm text-gray-500">Places, addresses</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 space-y-3">
+                        <button 
+                            onclick="alert('Re-processing functionality to be implemented');"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                            Re-process with Selection
+                        </button>
+                        <button 
+                            onclick="
+                                var checkboxes = document.querySelectorAll('#entityTypeControls input[type=checkbox]');
+                                for(var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = true; }
+                                alert('All entities selected');
+                            "
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                            Select All
+                        </button>
+                        <button 
+                            onclick="
+                                var checkboxes = document.querySelectorAll('#entityTypeControls input[type=checkbox]');
+                                for(var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = false; }
+                                alert('All entities cleared');
+                            "
+                            class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Large Preview -->
+                <div class="lg:col-span-2">
+                    <h4 class="font-semibold text-lg text-gray-700 mb-4">Live Preview</h4>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <textarea 
+                            id="livePreviewText" 
+                            readonly
+                            class="w-full h-96 p-4 bg-white border border-gray-200 rounded-lg resize-none focus:outline-none text-gray-800 text-base leading-relaxed"
+                            >{{ result.anonymized_text if result.anonymized_text else 'No content to display' }}</textarea>
+                    </div>
+                    
+                    <div class="mt-4 flex justify-between items-center">
+                        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex-1 mr-4">
+                            <p class="text-yellow-700 text-sm">
+                                <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Check/uncheck entities and click "Re-process" to see changes
+                            </p>
+                        </div>
+                        <button 
+                            onclick="
+                                var textArea = document.getElementById('livePreviewText');
+                                if(textArea) {
+                                    textArea.select();
+                                    textArea.setSelectionRange(0, 99999);
+                                    document.execCommand('copy');
+                                    var btn = this;
+                                    var originalText = btn.textContent;
+                                    btn.textContent = 'Copied!';
+                                    setTimeout(function(){btn.textContent = originalText;}, 2000);
+                                } else {
+                                    alert('No live preview text to copy');
+                                }
+                            "
+                            class="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg font-medium transition-colors">
+                            Copy Result
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -68,14 +334,17 @@
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Download Options</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="{{ url_for('download', filename=result.output_file) }}" 
-               class="bg-green-600 hover:bg-green-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
+            <a href="{{ url_for('download_file') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors inline-flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
                 Download Anonymized {{ result.file_type.upper() }}
             </a>
-            <a href="{{ url_for('download', filename=result.original_file) }}" 
+            <button onclick="alert('Original file download not implemented yet')" 
                class="bg-gray-600 hover:bg-gray-700 text-white text-center py-3 px-6 rounded-lg font-medium transition-colors">
                 Download Original
-            </a>
+            </button>
         </div>
     </div>
     {% endif %}
@@ -85,17 +354,69 @@
         <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-semibold transition-colors">
             Anonymize Another Document
         </a>
-        
-        <button 
-            onclick="window.print()" 
-            class="bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors">
-            Print Results
-        </button>
+        <a href="/entity-selection" class="bg-purple-600 hover:bg-purple-700 text-white py-3 px-8 rounded-lg font-semibold transition-colors">
+            Advanced Mode
+        </a>
     </div>
 </div>
 
-<!-- JavaScript for copy functionality -->
+<!-- JavaScript for copy functionality and tabs -->
 <script>
+// Simple, direct tab functionality
+function showTab(tabName) {
+    console.log('Switching to tab:', tabName);
+    
+    // Hide all tab contents
+    var contents = document.getElementsByClassName('tab-content');
+    for (var i = 0; i < contents.length; i++) {
+        contents[i].style.display = 'none';
+        contents[i].classList.add('hidden');
+    }
+    
+    // Reset all tab buttons
+    var buttons = document.getElementsByClassName('tab-button');
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('border-blue-600', 'text-blue-600');
+        buttons[i].classList.add('border-transparent', 'text-gray-500');
+    }
+    
+    // Show selected tab
+    var targetContent = document.getElementById(tabName + 'Content');
+    if (targetContent) {
+        targetContent.style.display = 'block';
+        targetContent.classList.remove('hidden');
+        console.log('Showed tab:', tabName + 'Content');
+    }
+    
+    // Activate selected button
+    var targetButton = document.getElementById(tabName + 'Tab');
+    if (targetButton) {
+        targetButton.classList.add('border-blue-600', 'text-blue-600');
+        targetButton.classList.remove('border-transparent', 'text-gray-500');
+        console.log('Activated button:', tabName + 'Tab');
+    }
+}
+
+// Initialize when page loads
+window.addEventListener('load', function() {
+    console.log('Page loaded - initializing tabs');
+    showTab('anonymized');
+});
+
+// Make function globally available
+window.showTab = showTab;
+
+// Initialize original mapping data from server
+var originalMapping = {};
+{% if changes and changes|length > 0 %}
+{% for change in changes %}
+originalMapping['{{ change.original|replace("'", "\\'") }}'] = '{{ change.replacement|replace("'", "\\'") }}';
+{% endfor %}
+{% endif %}
+
+// Original anonymized text for live editing
+var originalText = {{ result.anonymized_text|tojson if result.anonymized_text else '""' }};
+
 function copyToClipboard() {
     const textArea = document.getElementById('resultText');
     textArea.select();
@@ -122,32 +443,113 @@ function copyToClipboard() {
     }
 }
 
-// Print styles
-window.addEventListener('beforeprint', function() {
-    document.body.classList.add('print-mode');
-});
+// Live Edit functionality for entity selection
+let sourceText = `{{ original_text|replace('`', '\\`')|replace('\\', '\\\\')|replace('\n', '\\n')|replace('\r', '') if original_text else '' }}`;
+let currentWorkflowType = '{{ result.workflow_type if result.workflow_type else "Unknown" }}';
 
-window.addEventListener('afterprint', function() {
-    document.body.classList.remove('print-mode');
-});
-</script>
+function updateEntitySelection() {
+    // Visual feedback - could add preview logic here
+    console.log('Entity selection updated');
+}
 
-<style>
-@media print {
-    .print-mode {
-        background: white !important;
+function selectAllEntities() {
+    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = true);
+    updateEntitySelection();
+}
+
+function clearAllEntities() {
+    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateEntitySelection();
+}
+
+function getSelectedEntityTypes() {
+    const checkboxes = document.querySelectorAll('#entityTypeControls input[type="checkbox"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function reprocessWithSelection() {
+    const selectedTypes = getSelectedEntityTypes();
+    
+    if (selectedTypes.length === 0) {
+        alert('Please select at least one entity type to anonymize.');
+        return;
     }
     
-    .print-mode button,
-    .print-mode a[class*="bg-"] {
-        display: none !important;
+    // Show loading state
+    const button = event.target;
+    const originalButtonText = button.textContent;
+    button.textContent = 'Processing...';
+    button.disabled = true;
+    
+    // Determine detection method from current workflow
+    let detectionMethod = 'spacy'; // default
+    if (currentWorkflowType.toLowerCase().includes('llm')) {
+        detectionMethod = 'llm';
     }
     
-    .print-mode .shadow-lg,
-    .print-mode .shadow {
-        box-shadow: none !important;
-        border: 1px solid #e5e7eb !important;
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('text', sourceText);
+    formData.append('detection_method', detectionMethod);
+    selectedTypes.forEach(type => {
+        formData.append('entity_types', type);
+    });
+    
+    // Send request to reprocess
+    fetch('/custom-anonymize', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Backend redirects to result page on success
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        if (data && !data.success) {
+            alert('Error: ' + (data.error || 'Unknown error occurred'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while reprocessing. Please try again.');
+    })
+    .finally(() => {
+        // Restore button state
+        button.textContent = originalButtonText;
+        button.disabled = false;
+    });
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function copyLiveResult() {
+    const liveText = document.getElementById('livePreviewText');
+    liveText.select();
+    liveText.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        
+        // Show success feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy live result: ', err);
+        alert('Failed to copy text. Please select and copy manually.');
     }
 }
-</style>
+</script>
 {% endblock %}

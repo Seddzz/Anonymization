@@ -27,8 +27,18 @@ class FakerReplacer:
         """Generate contextually appropriate replacements"""
         if entity_type == "PERSON":
             return self.faker.name()
-        elif entity_type == "GPE":
-            return self.faker.city()
+        elif entity_type in ["GPE", "LOCATION"]:
+            # Handle both geographical and location entities
+            text_lower = text.lower()
+            if any(word in text_lower for word in ['street', 'avenue', 'road', 'boulevard', 'lane', 'drive', 'rue', 'avenue']):
+                # Street names
+                return self.faker.street_name()
+            elif any(word in text_lower for word in ['main st', 'first st', 'second st', 'oak st', 'elm st']):
+                # Common street patterns
+                return f"{random.choice(['Oak', 'Elm', 'Pine', 'Maple', 'Cedar', 'First', 'Second', 'Third'])} {random.choice(['Street', 'Avenue', 'Road'])}"
+            else:
+                # Cities, states, countries
+                return self.faker.city()
         elif entity_type in ["ORG", "ORGANIZATION"]:
             # Smart organization replacement based on context
             text_lower = text.lower()

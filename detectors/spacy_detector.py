@@ -70,8 +70,11 @@ class SpacyDetector:
         
         return True
 
-    def detect(self, text: str):
+    def detect(self, text: str, entity_types=None):
         """Return list of detected entities (text, label, start, end)."""
+        if entity_types is None:
+            entity_types = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION"]
+        
         if self.use_spacy:
             doc = self.nlp(text)
             entities = []
@@ -80,59 +83,84 @@ class SpacyDetector:
                 entity_text = ent.text.strip()
                 
                 # Filter person entities more carefully
-                if ent.label_ in ['PERSON', 'PER']:
+                if ent.label_ in ['PERSON', 'PER'] and 'PERSON' in entity_types:
                     if self._is_valid_person_name(entity_text):
                         entities.append((entity_text, 'PERSON', ent.start_char, ent.end_char))
-                elif ent.label_ in ['EMAIL']:
+                elif ent.label_ in ['EMAIL'] and 'EMAIL' in entity_types:
                     entities.append((entity_text, 'EMAIL', ent.start_char, ent.end_char))
-                elif ent.label_ in ['ORG']:
+                elif ent.label_ in ['ORG'] and 'ORGANIZATION' in entity_types:
                     # Organization names
                     entities.append((entity_text, 'ORGANIZATION', ent.start_char, ent.end_char))
+                elif ent.label_ in ['GPE', 'LOC', 'FAC'] and 'LOCATION' in entity_types:
+                    # Geopolitical entities (cities, states, countries), locations, facilities
+                    if len(entity_text) > 2 and not re.search(r'\d', entity_text):  # Filter out short or numeric entries
+                        entities.append((entity_text, 'LOCATION', ent.start_char, ent.end_char))
             
-            # Detect ages with regex
-            age_pattern = r'\b(?:âgé(?:e)?\s+de\s+)?(\d{1,2})\s+ans?\b|\b(\d{1,2})\s+years?\s+old\b'
-            for match in re.finditer(age_pattern, text, re.IGNORECASE):
-                age_num = match.group(1) or match.group(2)
-                if age_num and 16 <= int(age_num) <= 99:  # Reasonable age range
-                    entities.append((match.group(), 'AGE', match.start(), match.end()))
+            # Detect ages with regex (only if AGE is selected)
+            if 'AGE' in entity_types:
+                age_pattern = r'\b(?:âgé(?:e)?\s+de\s+)?(\d{1,2})\s+ans?\b|\b(\d{1,2})\s+years?\s+old\b'
+                for match in re.finditer(age_pattern, text, re.IGNORECASE):
+                    age_num = match.group(1) or match.group(2)
+                    if age_num and 16 <= int(age_num) <= 99:  # Reasonable age range
+                        entities.append((match.group(), 'AGE', match.start(), match.end()))
+                
+                # Also detect standalone reasonable ages in context
+                age_context_pattern = r'\b(1[6-9]|[2-6][0-9]|7[0-9]|8[0-9]|9[0-9])\s+(?:ans?|years?)\b'
+                for match in re.finditer(age_context_pattern, text, re.IGNORECASE):
+                    # Check if already detected
+                    overlap = any(start <= match.start() < end or start < match.end() <= end 
+                                for _, _, start, end in entities)
+                    if not overlap:
+                        entities.append((match.group(), 'AGE', match.start(), match.end()))
             
-            # Also detect standalone reasonable ages in context
-            age_context_pattern = r'\b(1[6-9]|[2-6][0-9]|7[0-9]|8[0-9]|9[0-9])\s+(?:ans?|years?)\b'
-            for match in re.finditer(age_context_pattern, text, re.IGNORECASE):
-                # Check if already detected
-                overlap = any(start <= match.start() < end or start < match.end() <= end 
-                            for _, _, start, end in entities)
-                if not overlap:
-                    entities.append((match.group(), 'AGE', match.start(), match.end()))
+            # Also detect emails with regex (only if EMAIL is selected)
+            if 'EMAIL' in entity_types:
+                email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+                for match in re.finditer(email_pattern, text):
+                    # Check if already detected
+                    overlap = any(start <= match.start() < end or start < match.end() <= end 
+                                for _, _, start, end in entities)
+                    if not overlap:
+                        entities.append((match.group(), 'EMAIL', match.start(), match.end()))
             
-            # Also detect emails with regex (spaCy often misses them)
-            email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-            for match in re.finditer(email_pattern, text):
-                # Check if already detected
-                overlap = any(start <= match.start() < end or start < match.end() <= end 
-                            for _, _, start, end in entities)
-                if not overlap:
-                    entities.append((match.group(), 'EMAIL', match.start(), match.end()))
+            # Detect phone numbers with regex (only if PHONE is selected)
+            if 'PHONE' in entity_types:
+                phone_patterns = [
+                    r'\+?1[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b',  # US format
+                    r'\+?\d{1,3}[-.\s]?\d{8,12}\b',  # International format
+                    r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b',  # Simple format
+                    r'\b\d{10,12}\b'  # Compact format
+                ]
+                for pattern in phone_patterns:
+                    for match in re.finditer(pattern, text):
+                        # Check if already detected and if it looks like a real phone number
+                        overlap = any(start <= match.start() < end or start < match.end() <= end 
+                                    for _, _, start, end in entities)
+                        phone_text = match.group()
+                        # Filter out sequences that are likely not phone numbers
+                        if not overlap and len(re.sub(r'[^\d]', '', phone_text)) >= 10:
+                            entities.append((phone_text, 'PHONE', match.start(), match.end()))
             
-            # Enhanced name detection - catch single names that spaCy might miss
-            single_name_pattern = r'\b[A-Z][a-z]{2,}\b'
-            common_names = {
-                'albert', 'marie', 'jean', 'pierre', 'paul', 'michel', 'robert', 'bernard', 'jacques', 'louis',
-                'john', 'mary', 'james', 'patricia', 'michael', 'linda', 'william', 'elizabeth', 'david', 'barbara',
-                'richard', 'susan', 'joseph', 'jessica', 'thomas', 'sarah', 'charles', 'karen', 'christopher', 'nancy',
-                'daniel', 'lisa', 'matthew', 'betty', 'anthony', 'helen', 'mark', 'sandra', 'donald', 'donna',
-                'steven', 'carol', 'paul', 'ruth', 'andrew', 'sharon', 'joshua', 'michelle', 'kenneth', 'laura',
-                'kevin', 'sarah', 'brian', 'kimberly', 'george', 'deborah', 'edward', 'dorothy', 'ronald', 'lisa',
-                'tim', 'nancy', 'jason', 'karen', 'jeffrey', 'betty', 'ryan', 'helen', 'jacob', 'sandra'
-            }
-            
-            for match in re.finditer(single_name_pattern, text):
-                candidate = match.group()
-                # Check if already detected
-                overlap = any(start <= match.start() < end or start < match.end() <= end 
-                            for _, _, start, end in entities)
-                if not overlap and candidate.lower() in common_names and self._is_valid_person_name(candidate):
-                    entities.append((candidate, 'PERSON', match.start(), match.end()))
+            # Enhanced name detection - catch single names that spaCy might miss (only if PERSON is selected)
+            if 'PERSON' in entity_types:
+                single_name_pattern = r'\b[A-Z][a-z]{2,}\b'
+                common_names = {
+                    'albert', 'marie', 'jean', 'pierre', 'paul', 'michel', 'robert', 'bernard', 'jacques', 'louis',
+                    'john', 'mary', 'james', 'patricia', 'michael', 'linda', 'william', 'elizabeth', 'david', 'barbara',
+                    'richard', 'susan', 'joseph', 'jessica', 'thomas', 'sarah', 'charles', 'karen', 'christopher', 'nancy',
+                    'daniel', 'lisa', 'matthew', 'betty', 'anthony', 'helen', 'mark', 'sandra', 'donald', 'donna',
+                    'steven', 'carol', 'paul', 'ruth', 'andrew', 'sharon', 'joshua', 'michelle', 'kenneth', 'laura',
+                    'kevin', 'sarah', 'brian', 'kimberly', 'george', 'deborah', 'edward', 'dorothy', 'ronald', 'lisa',
+                    'tim', 'nancy', 'jason', 'karen', 'jeffrey', 'betty', 'ryan', 'helen', 'jacob', 'sandra'
+                }
+                
+                for match in re.finditer(single_name_pattern, text):
+                    candidate = match.group()
+                    # Check if already detected
+                    overlap = any(start <= match.start() < end or start < match.end() <= end 
+                                for _, _, start, end in entities)
+                    if not overlap and candidate.lower() in common_names and self._is_valid_person_name(candidate):
+                        entities.append((candidate, 'PERSON', match.start(), match.end()))
             
             return entities
         else:

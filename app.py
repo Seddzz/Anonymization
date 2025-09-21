@@ -83,6 +83,181 @@ def result():
                          changes=changes,  # Add the formatted changes
                          workflow_type=result_data.get('workflow_type', 'Unknown'))
 
+# Route for the entity selection page
+@app.route('/entity-selection')
+def entity_selection():
+    """
+    Renders the entity selection page where users can choose which types
+    of entities to detect and anonymize.
+    """
+    return render_template('entity_selection.html')
+
+# Route to handle custom anonymization with selected entities
+@app.route('/custom-anonymize', methods=['POST'])
+def custom_anonymize():
+    """
+    This route handles the POST request for anonymizing data with custom entity selection.
+    It can handle either text from the textarea or a file upload.
+    """
+    try:
+        # Get selected entity types
+        entity_types = request.form.getlist('entity_types')
+        detection_method = request.form.get('detection_method', 'llm')
+        
+        print(f"Custom anonymization with entity types: {entity_types}")
+        print(f"Using detection method: {detection_method}")
+        
+        # Check if text was provided
+        if 'text' in request.form and request.form['text'].strip():
+            input_text = request.form['text'].strip()
+            return handle_custom_text_input(input_text, entity_types, detection_method)
+        
+        # Check if file was uploaded
+        elif 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            return handle_custom_file_upload(file, entity_types, detection_method)
+        
+        else:
+            return jsonify({'success': False, 'error': 'No text or file provided'})
+            
+    except Exception as e:
+        print(f"❌ Error in custom anonymization: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'An error occurred during custom anonymization: {str(e)}'
+        })
+
+def handle_custom_file_upload(file, entity_types, detection_method):
+    """Handle file upload with custom entity selection"""
+    try:
+        # Save uploaded file temporarily
+        temp_dir = tempfile.mkdtemp()
+        file_path = os.path.join(temp_dir, file.filename)
+        file.save(file_path)
+        
+        print(f"Custom processing file: {file.filename}")
+        print(f"Entity types: {entity_types}")
+        print(f"Detection method: {detection_method}")
+        
+        # Determine file type
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension == '.txt':
+            file_type = 'txt'
+        elif file_extension == '.pdf':
+            file_type = 'pdf'
+        elif file_extension in ['.docx', '.doc']:
+            file_type = 'docx'
+        else:
+            return jsonify({'success': False, 'error': 'Unsupported file type'})
+        
+        # Create pipeline with selected detection method
+        pipeline = AnonymizerPipeline(detector=detection_method)
+        
+        # Create document processor
+        doc_processor = DocumentProcessor(pipeline)
+        
+        # Process the file with custom entity types
+        result = doc_processor.process_file_with_entities(file_path, file_type, entity_types)
+        
+        if result['success']:
+            # Store results in session with proper download support
+            session['anonymization_result'] = {
+                'success': True,
+                'original_text': result['original_text'],
+                'anonymized_text': result['anonymized_text'],
+                'replacement_mapping': result['replacement_mapping'],
+                'entity_info': result.get('entity_info', {}),
+                'statistics': {
+                    'entities_found': len(result['replacement_mapping']),
+                    'entities_anonymized': len(result['replacement_mapping']),
+                    'entity_types_found': len(set(result.get('entity_info', {}).values())),
+                    'selected_entity_types': entity_types,
+                    'detection_method': detection_method,
+                    'processing_time': '0.2'
+                },
+                'output_file': os.path.basename(result.get('output_path', '')),
+                'original_file': file.filename,
+                'file_type': file_type,
+                'has_file_download': True,
+                'workflow_type': f'Custom ({detection_method.upper()})'
+            }
+            
+            # Store the file path in session for download route
+            session['anonymized_file_path'] = result.get('output_path', '')
+            
+            # Clean up temp file
+            try:
+                os.remove(file_path)
+                os.rmdir(temp_dir)
+            except:
+                pass  # Ignore cleanup errors
+                
+            return redirect(url_for('result'))
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error occurred')
+            })
+            
+    except Exception as e:
+        print(f"❌ Error processing custom file: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Error processing file: {str(e)}'
+        })
+
+def handle_custom_text_input(input_text, entity_types, detection_method):
+    """Handle text input with custom entity selection"""
+    try:
+        print(f"Custom processing text: {input_text[:100]}...")
+        print(f"Entity types: {entity_types}")
+        print(f"Detection method: {detection_method}")
+        
+        # Create pipeline with selected detection method
+        pipeline = AnonymizerPipeline(detector=detection_method)
+        
+        # Anonymize with custom entity types
+        result = pipeline.anonymize(input_text, entity_types)
+        
+        if result.get('success', True):  # Assume success if not explicitly set
+            # Store results in session
+            session['anonymization_result'] = {
+                'success': True,
+                'original_text': input_text,
+                'anonymized_text': result['anonymized_text'],
+                'replacement_mapping': result['replacement_mapping'],
+                'entity_info': result.get('entity_info', {}),
+                'statistics': {
+                    'entities_found': len(result['replacement_mapping']),
+                    'entities_anonymized': len(result['replacement_mapping']),
+                    'entity_types_found': len(set(result.get('entity_info', {}).values())),
+                    'selected_entity_types': entity_types,
+                    'detection_method': detection_method,
+                    'processing_time': '0.1'
+                },
+                'workflow_type': f'Custom Text ({detection_method.upper()})'
+            }
+            
+            return redirect(url_for('result'))
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error occurred')
+            })
+            
+    except Exception as e:
+        print(f"❌ Error processing custom text: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Error processing text: {str(e)}'
+        })
+
 # Route to handle the anonymization process
 @app.route('/anonymize', methods=['POST'])
 def anonymize():
@@ -121,27 +296,18 @@ def anonymize():
             else:
                 # Use basic pipeline as fallback
                 pipeline = AnonymizerPipeline(detector=detector_type)
-                anonymized_text = pipeline.anonymize(input_text)
-                
-                # Get detailed replacement info
-                replacer = pipeline.replacer
-                replacement_details = replacer.get_replacements_with_types()
-                
-                # Format replacement mapping
-                replacement_mapping = {}
-                entity_info = {}
-                for original, replacement, entity_type in replacement_details:
-                    replacement_mapping[original] = replacement
-                    entity_info[original] = entity_type
+                result = pipeline.anonymize(input_text)
                 
                 # Calculate statistics
-                entities_found = len(replacement_mapping)
-                entities_anonymized = len(replacement_mapping)
+                entities_found = len(result['replacement_mapping'])
+                entities_anonymized = len(result['replacement_mapping'])
                 
                 session['anonymization_result'] = {
                     'success': True,
                     'original_text': input_text,
-                    'anonymized_text': anonymized_text,
+                    'anonymized_text': result['anonymized_text'],
+                    'replacement_mapping': result['replacement_mapping'],
+                    'entity_info': result['entity_info'],
                     'statistics': {
                         'detector_used': detector_type,
                         'entities_found': entities_found,
@@ -262,35 +428,24 @@ def anonymize():
                         }
                     else:
                         # Use basic pipeline
-                        anonymized_text = pipeline.anonymize(file_content)
-                        
-                        # Get detailed replacement info
-                        replacer = pipeline.replacer
-                        replacement_details = replacer.get_replacements_with_types()
-                        
-                        # Format replacement mapping
-                        replacement_mapping = {}
-                        entity_info = {}
-                        for original, replacement, entity_type in replacement_details:
-                            replacement_mapping[original] = replacement
-                            entity_info[original] = entity_type
+                        result = pipeline.anonymize(file_content)
                         
                         # Calculate statistics
-                        entities_found = len(replacement_mapping)
-                        entities_anonymized = len(replacement_mapping)
+                        entities_found = len(result['replacement_mapping'])
+                        entities_anonymized = len(result['replacement_mapping'])
                         
                         session['anonymization_result'] = {
                             'success': True,
                             'original_text': file_content,
-                            'anonymized_text': anonymized_text,
+                            'anonymized_text': result['anonymized_text'],
                             'statistics': {
                                 'detector_used': detector_type,
                                 'entities_found': entities_found,
                                 'entities_anonymized': entities_anonymized,
                                 'processing_time': '0.8'
                             },
-                            'replacement_mapping': replacement_mapping,
-                            'entity_info': entity_info,
+                            'replacement_mapping': result['replacement_mapping'],
+                            'entity_info': result['entity_info'],
                             'error_message': None,
                             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                             'workflow_type': 'Basic Pipeline',

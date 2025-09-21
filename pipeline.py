@@ -13,6 +13,25 @@ class AnonymizerPipeline:
 
         self.replacer = replacer or FakerReplacer()
 
-    def anonymize(self, text: str):
-        entities = self.detector.detect(text)
-        return self.replacer.replace(text, entities)
+    def anonymize(self, text: str, entity_types=None):
+        # Clear previous replacements for fresh start
+        self.replacer.replacements.clear()
+        self.replacer.entity_types.clear()
+        
+        # Pass entity_types to both LLM and SpaCy detectors
+        if hasattr(self.detector, 'detect') and isinstance(self.detector, LLMDetector):
+            entities = self.detector.detect(text, entity_types)
+        else:
+            # SpaCy detector also supports entity_types now
+            entities = self.detector.detect(text, entity_types)
+        
+        # Get anonymized text
+        anonymized_text = self.replacer.replace(text, entities)
+        
+        # Return dictionary format for consistency
+        return {
+            'anonymized_text': anonymized_text,
+            'replacement_mapping': self.replacer.replacements.copy(),
+            'entity_info': self.replacer.entity_types.copy(),
+            'success': True
+        }
