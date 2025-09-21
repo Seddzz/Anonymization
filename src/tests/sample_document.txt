@@ -1,0 +1,38 @@
+Sample Document for Anonymization Testing
+
+This document contains various types of personal information to test our anonymization system.
+
+PERSONAL INFORMATION:
+Name: Dr. Sarah Johnson
+Email: sarah.johnson@university.edu
+Phone: +1-555-987-6543
+Age: She is 34 years old
+Address: 123 Main Street, New York, NY 10001
+
+PROFESSIONAL DETAILS:
+Colleague: Professor Michael Smith
+Department: Computer Science
+Institution: Stanford University
+Contact: michael.smith@stanford.edu
+Office Phone: +1-650-723-2300
+
+ADDITIONAL TEST CASES:
+- Student: Emily Chen (age 22)
+- Researcher: Dr. Ahmed Hassan
+- Email: ahmed.hassan@research.org
+- Another person: John Davis works in IT
+- Age reference: The participant was 45 years old during the study
+
+FRENCH NAMES (for bilingual testing):
+- Nom: Marie Dupont
+- Email: marie.dupont@sorbonne.fr
+- Âge: Elle a 28 ans
+- Collègue: Pierre Martineau
+
+MIXED CONTENT:
+The research team includes Dr. Lisa Wang (lisa.wang@mit.edu), 
+Professor Carlos Rodriguez (age 52), and Sarah Miller who is 29 years old.
+For questions, contact info@research-center.org or call +1-617-253-1000.
+
+This document should test various detection patterns including names, 
+emails, ages, and phone numbers in different contexts.

@@ -1,0 +1,38 @@
+# Anonymization Agent Configuration
+
+agent:
+  name: "AnonymizationAgent"
+  version: "1.0"
+  description: "Intelligent agent for document anonymization"
+
+detection:
+  methods:
+    - "llm"
+    - "spacy"
+  default_method: "spacy"
+
+entities:
+  types:
+    - "PERSON"
+    - "EMAIL" 
+    - "ORGANIZATION"
+    - "AGE"
+    - "LOCATION"
+    - "PHONE"
+
+models:
+  llm:
+    provider: "openai"
+    model: "gpt-3.5-turbo"
+    temperature: 0.1
+  
+  spacy:
+    model: "en_core_web_sm"
+
+memory:
+  type: "sqlite"
+  path: "src/memory_store/agent_memory.db"
+
+logging:
+  level: "INFO"
+  file: "logs/agent.log"

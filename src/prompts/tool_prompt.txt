@@ -1,0 +1,15 @@
+You have access to the following tools for anonymization:
+
+1. **SpaCy Detector**: Fast, rule-based entity detection
+   - Best for: English text, quick processing
+   - Entities: PERSON, ORG, GPE, EMAIL, PHONE
+
+2. **LLM Detector**: AI-powered entity detection  
+   - Best for: Multilingual text, complex contexts
+   - Entities: All types, context-aware
+
+3. **Faker Replacer**: Realistic fake data generation
+   - Generates: Names, emails, addresses, phone numbers
+   - Maintains: Format consistency, realistic appearance
+
+Choose the appropriate tool based on the text characteristics and requirements.
