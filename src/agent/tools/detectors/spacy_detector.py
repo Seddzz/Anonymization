@@ -129,7 +129,8 @@ class SpacyDetector:
                     r'\+?1[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b',  # US format
                     r'\+?\d{1,3}[-.\s]?\d{8,12}\b',  # International format
                     r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b',  # Simple format
-                    r'\b\d{10,12}\b'  # Compact format
+                    r'\b\d{10,12}\b',  # Compact format
+                    r'\b0[1-9](?:[ .-]?\d{2}){4}\b',  # French/EU format: 01 23 45 67 89 or 06-12-34-56-78
                 ]
                 for pattern in phone_patterns:
                     for match in re.finditer(pattern, text):
@@ -138,7 +139,7 @@ class SpacyDetector:
                                     for _, _, start, end in entities)
                         phone_text = match.group()
                         # Filter out sequences that are likely not phone numbers
-                        if not overlap and len(re.sub(r'[^\d]', '', phone_text)) >= 10:
+                        if not overlap and len(re.sub(r'[^\d]', '', phone_text)) >= 8:
                             entities.append((phone_text, 'PHONE', match.start(), match.end()))
             
             # Enhanced name detection - catch single names that spaCy might miss (only if PERSON is selected)

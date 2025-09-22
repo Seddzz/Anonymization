@@ -189,140 +189,58 @@
 </div>
 
 <script>
+// Custom entity selection page logic
 function selectAll() {
     document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
         checkbox.checked = true;
     });
 }
-
 function selectNone() {
     document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
         checkbox.checked = false;
     });
 }
-
 function showTextInput() {
-    // Update tab appearance
     document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
     document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
-    
-    // Show/hide sections
     document.getElementById('textInputSection').classList.remove('hidden');
     document.getElementById('fileInputSection').classList.add('hidden');
-    
-    // Update submit button
     document.getElementById('submitBtn').textContent = '🚀 Anonymize Text with Custom Settings';
-    
-    // Clear file input and make text required
     document.getElementById('file-upload').value = '';
     document.getElementById('file-upload').removeAttribute('required');
     document.getElementById('custom_text').setAttribute('required', 'required');
 }
-
 function showFileInput() {
-    // Update tab appearance
     document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
     document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
-    
-    // Show/hide sections
     document.getElementById('fileInputSection').classList.remove('hidden');
     document.getElementById('textInputSection').classList.add('hidden');
-    
-    // Update submit button
     document.getElementById('submitBtn').textContent = '🚀 Anonymize File with Custom Settings';
-    
-    // Clear text input and make file required
     document.getElementById('custom_text').value = '';
     document.getElementById('custom_text').removeAttribute('required');
     document.getElementById('file-upload').setAttribute('required', 'required');
 }
-
-// File upload preview
-document.getElementById('file-upload').addEventListener('change', function(e) {
-    updateFileDisplay(e.target.files[0]);
-});
-
-function updateFileDisplay(file) {
-    if (file) {
-        const label = document.querySelector('label[for="file-upload"] span');
-        label.textContent = `Selected: ${file.name}`;
-        label.classList.add('text-green-600');
-        
-        // Update dropzone to show file selected
-        const dropzone = document.getElementById('dropzone');
-        dropzone.classList.add('border-green-400', 'bg-green-50');
-        dropzone.classList.remove('border-gray-300');
-    }
-}
-
-// Drag and Drop functionality
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('file-upload');
-
-// Prevent default drag behaviors
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    dropzone.addEventListener(eventName, preventDefaults, false);
-    document.body.addEventListener(eventName, preventDefaults, false);
-});
-
-// Highlight drop area when item is dragged over it
-['dragenter', 'dragover'].forEach(eventName => {
-    dropzone.addEventListener(eventName, highlight, false);
-});
-
-['dragleave', 'drop'].forEach(eventName => {
-    dropzone.addEventListener(eventName, unhighlight, false);
-});
-
-// Handle dropped files
-dropzone.addEventListener('drop', handleDrop, false);
-
-function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-}
-
-function highlight(e) {
-    dropzone.classList.add('border-blue-500', 'bg-blue-50');
-    dropzone.classList.remove('border-gray-300');
-}
-
-function unhighlight(e) {
-    dropzone.classList.remove('border-blue-500', 'bg-blue-50');
-    dropzone.classList.add('border-gray-300');
-}
-
-function handleDrop(e) {
-    const dt = e.dataTransfer;
-    const files = dt.files;
-    
-    if (files.length > 0) {
-        const file = files[0];
-        
-        // Check file type
-        const allowedTypes = ['.txt', '.pdf', '.docx', '.doc'];
-        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-        
-        if (allowedTypes.includes(fileExtension)) {
-            // Set the file to the input
-            fileInput.files = files;
-            
-            // Update display
-            updateFileDisplay(file);
-            
-            // Switch to file input mode if not already
-            if (document.getElementById('fileInputSection').classList.contains('hidden')) {
-                showFileInput();
-            }
-        } else {
-            alert('Please select a valid file type: TXT, PDF, or DOCX');
-        }
-    }
-}
-
-// Initialize with text input active
 document.addEventListener('DOMContentLoaded', function() {
     showTextInput();
+    // Attach progress bar logic to custom form submit
+    const form = document.querySelector('form[action*="custom_anonymize"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            // Get detection method (llm or spacy)
+            let detectionMethod = 'llm';
+            const llmRadio = document.getElementById('llm_method');
+            const spacyRadio = document.getElementById('spacy_method');
+            if (spacyRadio && spacyRadio.checked) detectionMethod = 'spacy';
+            if (llmRadio && llmRadio.checked) detectionMethod = 'llm';
+            if (submitBtn && typeof transformButtonToProgressBar === 'function') {
+                transformButtonToProgressBar(submitBtn, detectionMethod, 'custom');
+            } else if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Processing...';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
