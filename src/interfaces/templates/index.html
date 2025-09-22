@@ -65,8 +65,9 @@
                         >{{ request.form.text if request.form.text }}</textarea>
                     <button 
                         type="submit"
-                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-8 rounded-lg font-semibold transition-colors text-lg"
-                        id="textSubmitBtn">
+                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-8 rounded-lg font-semibold transition-colors text-lg opacity-50 cursor-not-allowed"
+                        id="textSubmitBtn"
+                        disabled>
                         Anonymize Text
                     </button>
                 </div>

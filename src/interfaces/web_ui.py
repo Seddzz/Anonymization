@@ -1,6 +1,6 @@
 # This is the main application file for the anonymization project.
 # It handles the routing for the different web pages and the core logic
-# for the anonymization process using LangGraph workflow.
+# for the anonymization process using the pipeline architecture.
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 import os
@@ -8,6 +8,9 @@ import json
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
+import threading
+import uuid
+import time
 
 # Add parent directories to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -34,18 +37,121 @@ static_dir = os.path.join(os.path.dirname(__file__), 'static')
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'your-secret-key-change-in-production'  # For session management
 
-# Try to import LangGraph workflow, fallback to basic pipeline if not available
-try:
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-    #from graph import anonymize_text
-    USE_LANGGRAPH = False  # Temporarily disable LangGraph until we fix the hanging issue
-    print("⚠️ LangGraph temporarily disabled, using basic pipeline")
-except ImportError:
-    USE_LANGGRAPH = False
-    print("⚠️ LangGraph not available, using basic pipeline")
-
-# Always import the basic pipeline as fallback
+# Import the anonymization pipeline
 from agent.executor import AnonymizerPipeline
+
+# Global task tracking for background processing
+background_tasks = {}
+
+def run_anonymization_task(task_id, input_data, detector_type, data_type):
+    """Run anonymization in background thread"""
+    global background_tasks
+    
+    try:
+        background_tasks[task_id]['status'] = 'processing'
+        background_tasks[task_id]['progress'] = 10
+        
+        # Always use the detector selected by the user
+        pipeline = AnonymizerPipeline(detector=detector_type)
+        if data_type == 'text':
+            # Process text (LLM allowed for short text)
+            background_tasks[task_id]['progress'] = 30
+            result = pipeline.anonymize(input_data)
+            
+            # Calculate statistics
+            entities_found = len(result['replacement_mapping'])
+            
+            # Store result
+            background_tasks[task_id].update({
+                'status': 'completed',
+                'progress': 100,
+                'result': {
+                    'success': True,
+                    'original_text': input_data,
+                    'anonymized_text': result['anonymized_text'],
+                    'replacement_mapping': result['replacement_mapping'],
+                    'entity_info': result.get('entity_info', {}),
+                    'statistics': {
+                        'detector_used': detector_type,
+                        'entities_found': entities_found,
+                        'entities_anonymized': entities_found,
+                        'processing_time': '30.0' if detector_type == 'llm' else '2.0'
+                    },
+                    'error_message': None,
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'workflow_type': 'Background Pipeline'
+                }
+            })
+            
+        else:  # file processing
+            background_tasks[task_id]['progress'] = 20
+            
+            # input_data is the file path for file processing
+            file_path, filename = input_data
+            file_extension = filename.split('.')[-1].lower()
+            if file_extension in ['pdf', 'docx', 'txt']:
+                background_tasks[task_id]['progress'] = 50
+                # Use DocumentProcessor
+                doc_processor = DocumentProcessor(pipeline)
+                result = doc_processor.process_file(file_path, file_extension)
+                
+                if result['success']:
+                    replacement_mapping = result.get('replacement_mapping', {})
+                    entity_info = {}
+                    
+                    if hasattr(pipeline.replacer, 'get_replacements_with_types'):
+                        replacement_details = pipeline.replacer.get_replacements_with_types()
+                        for original, replacement, entity_type in replacement_details:
+                            entity_info[original] = entity_type
+                    
+                    background_tasks[task_id].update({
+                        'status': 'completed',
+                        'progress': 100,
+                        'result': {
+                            'success': True,
+                            'original_text': result['original_text'],
+                            'anonymized_text': result['anonymized_text'],
+                            'statistics': {
+                                'detector_used': detector_type,
+                                'entities_found': len(replacement_mapping),
+                                'entities_anonymized': len(replacement_mapping),
+                                'processing_time': '30.0' if detector_type == 'llm' else '3.0'
+                            },
+                            'replacement_mapping': replacement_mapping,
+                            'entity_info': entity_info,
+                            'error_message': None,
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'workflow_type': 'Document Processing',
+                            'source_file': filename,
+                            'output_file': os.path.basename(result['output_path']),
+                            'has_file_download': True,
+                            'message': result.get('message', 'Document processed successfully'),
+                            'output_path': result['output_path']
+                        }
+                    })
+                else:
+                    background_tasks[task_id].update({
+                        'status': 'error',
+                        'progress': 0,
+                        'result': {
+                            'success': False,
+                            'error_message': result.get('error', 'Document processing failed'),
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'source_file': filename
+                        }
+                    })
+            
+    except Exception as e:
+        print(f"Background task error: {str(e)}")
+        background_tasks[task_id].update({
+            'status': 'error',
+            'progress': 0,
+            'result': {
+                'success': False,
+                'error_message': f'Processing failed: {str(e)}',
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        })
 
 # Route for the landing page (index.html)
 @app.route('/')
@@ -55,13 +161,27 @@ def index():
     """
     return render_template('index.html')
 
-# Route for the loading screen (loading.html)
-@app.route('/loading')
-def loading():
+
+@app.route('/task_status/<task_id>')
+def task_status(task_id):
     """
-    Renders the loading screen to show that processing is in progress.
+    API endpoint to check task status and progress.
+    Returns JSON with current task state.
     """
-    return render_template('loading.html')
+    if task_id not in background_tasks:
+        return jsonify({'status': 'not_found'}), 404
+    
+    task = background_tasks[task_id]
+    
+    # Calculate elapsed time
+    elapsed = (datetime.now() - task['start_time']).total_seconds()
+    
+    return jsonify({
+        'status': task['status'],
+        'progress': task.get('progress', 0),
+        'elapsed_time': elapsed,
+        'type': task.get('type', 'unknown')
+    })
 
 # Route for the results page (result.html)
 @app.route('/result')
@@ -176,8 +296,18 @@ def handle_custom_file_upload(file, entity_types, detection_method):
         # Create document processor
         doc_processor = DocumentProcessor(pipeline)
         
-        # Process the file with custom entity types
-        result = doc_processor.process_file_with_entities(file_path, file_type, entity_types)
+        # Process the file with custom entity types (with timeout handling)
+        try:
+            print(f"🚀 Starting {detection_method.upper()} processing for file: {file.filename}")
+            result = doc_processor.process_file_with_entities(file_path, file_type, entity_types)
+            print(f"✅ {detection_method.upper()} processing completed successfully")
+        except Exception as e:
+            print(f"❌ Error during {detection_method.upper()} processing: {e}")
+            return jsonify({
+                'success': False, 
+                'error': f'Processing failed with {detection_method.upper()}. Try SpaCy instead or contact support.',
+                'details': str(e)
+            })
         
         if result['success']:
             # Store results in session with proper download support
@@ -238,8 +368,18 @@ def handle_custom_text_input(input_text, entity_types, detection_method):
         # Create pipeline with selected detection method
         pipeline = AnonymizerPipeline(detector=detection_method)
         
-        # Anonymize with custom entity types
-        result = pipeline.anonymize(input_text, entity_types)
+        # Anonymize with custom entity types (with timeout handling)
+        try:
+            print(f"🚀 Starting {detection_method.upper()} processing for text input")
+            result = pipeline.anonymize(input_text, entity_types)
+            print(f"✅ {detection_method.upper()} processing completed successfully")
+        except Exception as e:
+            print(f"❌ Error during {detection_method.upper()} processing: {e}")
+            return jsonify({
+                'success': False, 
+                'error': f'Processing failed with {detection_method.upper()}. Try SpaCy instead or contact support.',
+                'details': str(e)
+            })
         
         if result.get('success', True):  # Assume success if not explicitly set
             # Store results in session
@@ -280,195 +420,98 @@ def handle_custom_text_input(input_text, entity_types, detection_method):
 @app.route('/anonymize', methods=['POST'])
 def anonymize():
     """
-    This route handles the POST request for anonymizing data using LangGraph workflow.
-    It can handle either text from the textarea or a file upload.
+    This route handles the POST request for anonymizing data.
+    It starts background processing and redirects to loading page.
     """
     try:
         # Check if the request contains text data
         if 'text' in request.form and request.form['text'].strip():
             input_text = request.form['text'].strip()
-            detector_type = request.form.get('detector', 'spacy')  # Default to spaCy
-            
-            print(f"Received text for anonymization: {input_text[:50]}...")
-            print(f"Using detector: {detector_type}")
-            
-            # Process with LangGraph or fallback pipeline
-            if USE_LANGGRAPH:
-                # Use LangGraph workflow
-                print(f"🚀 Running LangGraph workflow...")
-                #result = anonymize_text(input_text, detector_type=detector_type)
-                print(f"📊 LangGraph result: {result}")
-                
-                # Store results in session for result page
-                session['anonymization_result'] = {
-                    'success': result.get('success', False),
-                    'original_text': result.get('original_text', input_text),
-                    'anonymized_text': result.get('anonymized_text', ''),
-                    'statistics': result.get('statistics', {}),
-                    'replacement_mapping': result.get('replacement_mapping', {}),
-                    'error_message': result.get('error_message'),
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'workflow_type': 'LangGraph'
-                }
-                print(f"💾 Session data: {session['anonymization_result']}")
-            else:
-                # Use basic pipeline as fallback
-                pipeline = AnonymizerPipeline(detector=detector_type)
-                result = pipeline.anonymize(input_text)
-                
-                # Calculate statistics
-                entities_found = len(result['replacement_mapping'])
-                entities_anonymized = len(result['replacement_mapping'])
-                
-                session['anonymization_result'] = {
-                    'success': True,
-                    'original_text': input_text,
-                    'anonymized_text': result['anonymized_text'],
-                    'replacement_mapping': result['replacement_mapping'],
-                    'entity_info': result.get('entity_info', {}),
-                    'statistics': {
-                        'detector_used': detector_type,
-                        'entities_found': entities_found,
-                        'entities_anonymized': entities_anonymized,
-                        'processing_time': '0.5'  # Placeholder for now
-                    },
-                    'error_message': None,
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'workflow_type': 'Basic Pipeline'
-                }
-                print(f"💾 Session data: {session['anonymization_result']}")
-            
-            # Redirect to result page
+            detector_type = request.form.get('detector', 'spacy')
+            print(f"Received text for anonymization: {input_text[:50]}... | Detector: {detector_type}")
+            pipeline = AnonymizerPipeline(detector=detector_type)
+            result = pipeline.anonymize(input_text)
+            entities_found = len(result['replacement_mapping'])
+            session['anonymization_result'] = {
+                'success': True,
+                'original_text': input_text,
+                'anonymized_text': result['anonymized_text'],
+                'replacement_mapping': result['replacement_mapping'],
+                'entity_info': result.get('entity_info', {}),
+                'statistics': {
+                    'detector_used': detector_type,
+                    'entities_found': entities_found,
+                    'entities_anonymized': entities_found,
+                    'processing_time': '0.5'
+                },
+                'error_message': None,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'workflow_type': 'Basic Pipeline'
+            }
             return redirect(url_for('result'))
 
         # Check if the request contains a file
         elif 'file' in request.files:
             file = request.files['file']
             if file.filename != '':
-                print(f"Received file for anonymization: {file.filename}")
-                
-                # Get file info
                 detector_type = request.form.get('detector', 'spacy')
                 file_extension = file.filename.split('.')[-1].lower()
-                
-                # Create pipeline
-                pipeline = AnonymizerPipeline(detector=detector_type)
-                
-                # Check if this is a document that needs special processing
-                if file_extension in ['pdf', 'docx', 'txt']:
-                    # Save uploaded file temporarily FIRST (before reading it)
-                    temp_dir = tempfile.gettempdir()
-                    temp_input_path = os.path.join(temp_dir, f"input_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
-                    file.save(temp_input_path)
-                    
-                    try:
-                        # Use DocumentProcessor to create anonymized document
-                        doc_processor = DocumentProcessor(pipeline)
-                        result = doc_processor.process_file(temp_input_path, file_extension)
-                        
-                        if result['success']:
-                            # Store file path for download
-                            session['anonymized_file_path'] = result['output_path']
-                            session['anonymized_file_type'] = result.get('file_type', file_extension)
-                            
-                            # Get replacement details for display
-                            replacement_mapping = result.get('replacement_mapping', {})
-                            entity_info = {}
-                            
-                            if hasattr(pipeline.replacer, 'get_replacements_with_types'):
-                                replacement_details = pipeline.replacer.get_replacements_with_types()
-                                for original, replacement, entity_type in replacement_details:
-                                    entity_info[original] = entity_type
-                            
-                            session['anonymization_result'] = {
-                                'success': True,
-                                'original_text': result['original_text'],
-                                'anonymized_text': result['anonymized_text'],
-                                'statistics': {
-                                    'detector_used': detector_type,
-                                    'entities_found': len(replacement_mapping),
-                                    'entities_anonymized': len(replacement_mapping),
-                                    'processing_time': '1.2'
-                                },
-                                'replacement_mapping': replacement_mapping,
-                                'entity_info': entity_info,
-                                'error_message': None,
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'workflow_type': 'Document Processing',
-                                'source_file': file.filename,
-                                'output_file': os.path.basename(result['output_path']),
-                                'has_file_download': True,
-                                'message': result.get('message', 'Document processed successfully')
-                            }
-                        else:
-                            session['anonymization_result'] = {
-                                'success': False,
-                                'error_message': result.get('error', 'Document processing failed'),
-                                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                'source_file': file.filename
-                            }
-                    
-                    finally:
-                        # Clean up temporary input file
-                        if os.path.exists(temp_input_path):
-                            os.remove(temp_input_path)
-                
-                else:
-                    # For other file types, use the old text-based approach
-                    # Extract text from file using the file processor
-                    file_content, error_message = extract_text_from_file(file, file.filename)
-                    
-                    if error_message:
-                        # File processing failed
-                        session['anonymization_result'] = {
-                            'success': False,
-                            'error_message': error_message,
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            'source_file': file.filename
-                        }
-                        return redirect(url_for('result'))
-                    
-                    # Continue with text-based processing for non-document files
-                    if USE_LANGGRAPH:
-                        #result = anonymize_text(file_content, detector_type=detector_type)
-                        session['anonymization_result'] = {
-                            'success': result.get('success', False),
-                            'original_text': result.get('original_text', file_content),
-                            'anonymized_text': result.get('anonymized_text', ''),
-                            'statistics': result.get('statistics', {}),
-                            'replacement_mapping': result.get('replacement_mapping', {}),
-                            'error_message': result.get('error_message'),
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            'workflow_type': 'LangGraph',
-                            'source_file': file.filename
-                        }
-                    else:
-                        # Use basic pipeline
-                        result = pipeline.anonymize(file_content)
-                        
-                        # Calculate statistics
-                        entities_found = len(result['replacement_mapping'])
-                        entities_anonymized = len(result['replacement_mapping'])
-                        
+                print(f"Received file for anonymization: {file.filename} | Detector: {detector_type}")
+                temp_dir = tempfile.gettempdir()
+                temp_input_path = os.path.join(temp_dir, f"input_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+                file.save(temp_input_path)
+                try:
+                    pipeline = AnonymizerPipeline(detector=detector_type)
+                    doc_processor = DocumentProcessor(pipeline)
+                    result = doc_processor.process_file(temp_input_path, file_extension)
+                    if result['success']:
+                        session['anonymized_file_path'] = result['output_path']
+                        session['anonymized_file_type'] = result.get('file_type', file_extension)
+                        replacement_mapping = result.get('replacement_mapping', {})
+                        entity_info = {}
+                        if hasattr(pipeline.replacer, 'get_replacements_with_types'):
+                            replacement_details = pipeline.replacer.get_replacements_with_types()
+                            for original, replacement, entity_type in replacement_details:
+                                entity_info[original] = entity_type
                         session['anonymization_result'] = {
                             'success': True,
-                            'original_text': file_content,
+                            'original_text': result['original_text'],
                             'anonymized_text': result['anonymized_text'],
                             'statistics': {
                                 'detector_used': detector_type,
-                                'entities_found': entities_found,
-                                'entities_anonymized': entities_anonymized,
-                                'processing_time': '0.8'
+                                'entities_found': len(replacement_mapping),
+                                'entities_anonymized': len(replacement_mapping),
+                                'processing_time': '1.2'
                             },
-                            'replacement_mapping': result['replacement_mapping'],
-                            'entity_info': result['entity_info'],
+                            'replacement_mapping': replacement_mapping,
+                            'entity_info': entity_info,
                             'error_message': None,
                             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            'workflow_type': 'Basic Pipeline',
+                            'workflow_type': 'Document Processing',
+                            'source_file': file.filename,
+                            'output_file': os.path.basename(result['output_path']),
+                            'file_type': result.get('file_type', file_extension),
+                            'has_file_download': True,
+                            'message': result.get('message', 'Document processed successfully')
+                        }
+                    else:
+                        session['anonymization_result'] = {
+                            'success': False,
+                            'error_message': result.get('error', 'Document processing failed'),
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                             'source_file': file.filename
                         }
-                
+                finally:
+                    if os.path.exists(temp_input_path):
+                        os.remove(temp_input_path)
                 return redirect(url_for('result'))
+        
+        # If no valid input, redirect back to index
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        print(f"Error in anonymize route: {str(e)}")
+        return redirect(url_for('index'))
             
         # If no text or file was provided, redirect back to the index page.
         session['anonymization_result'] = {

@@ -100,5 +100,4 @@ anonymization/
 
 ## 🎯 Next
 
-- [ ] LangGraph integration for advanced workflows
 - [ ] Additional file format support (Excel, CSV)

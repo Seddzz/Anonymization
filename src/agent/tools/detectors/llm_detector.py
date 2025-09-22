@@ -1,38 +1,29 @@
 import subprocess
 import json
 import re
+import ollama
 
 class LLMDetector:
     def __init__(self, model="mistral"):
         self.model = model
-        self.retry_count = 0
-        self.max_retries = 3  # Increased retries
-        self.fallback_enabled = True  # Enable SpaCy fallback
+        self.client = ollama.Client()  # persistent connection
 
-    def detect(self, text: str, entity_types=None):
-        """
-        Detect sensitive entities using Mistral via Ollama.
-        Args:
-            text: Text to analyze
-            entity_types: List of entity types to detect (e.g., ['PERSON', 'EMAIL'])
-                         If None, defaults to all types
-        Returns a list of tuples: (entity_text, entity_label, start, end)
-        """
-        # Default entity types if none specified
+    def detect(self, text, entity_types=None):
         if entity_types is None:
             entity_types = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION"]
-        
-        # Create the entity types string for the prompt
+
         entity_types_str = "|".join(entity_types)
-        
-        # Simplified prompt for better Arabic support
-        prompt = f"""Find personal information in this text. Return JSON only.
-
-Format: [{{"text":"found_text","label":"{entity_types_str}","start":0,"end":5}}]
-
+        prompt = f"""Extract personal info from text. Return JSON array only.
+Types: {entity_types_str}
+Format: [{{"text":"found_text","label":"PERSON","start":0,"end":5}}]
 Text: {text}
-
 JSON:"""
+
+        response = self.client.chat(model=self.model, messages=[{"role": "user", "content": prompt}])
+        output = response['message']['content'].strip()
+
+        return self._parse_json_response(output, entity_types)
+
 
         try:
             # Strategy 1: Multiple attempts with shorter timeout
@@ -64,66 +55,77 @@ JSON:"""
 
     def _attempt_detection(self, prompt, text, entity_types):
         """Single detection attempt with improved error handling"""
-        # Calculate dynamic timeout based on text length
-        base_timeout = 30
-        text_length_factor = len(text) / 100  # Extra second per 100 chars
-        dynamic_timeout = min(base_timeout + text_length_factor, 60)  # Max 60 seconds
-        
-        for attempt in range(3):  # Quick retry loop
+        # Optimized timeout - balance between speed and reliability
+    # Timeout removed: allow unlimited execution time
+
+        for attempt in range(2):
             try:
-                # Enhanced subprocess call with proper encoding for Arabic
+                print(f"\n===== LLM DEBUG START (Attempt {attempt + 1}/2) =====")
+                print(f"Prompt sent to Ollama (model: {self.model}):\n{prompt}\n---END PROMPT---")
+                print(f"Command: ollama run {self.model}")
+                print(f"Timeout: unlimited (no timeout)")
                 result = subprocess.run(
                     ["ollama", "run", self.model],
                     input=prompt,
                     text=True,
                     capture_output=True,
-                    timeout=dynamic_timeout,  # Dynamic timeout based on text length
                     encoding="utf-8",
                     errors="ignore"  # Ignore encoding errors
                 )
 
-                if result.returncode != 0:
-                    print(f"⚠️ Ollama returned non-zero exit code: {result.returncode}")
-                    if result.stderr:
-                        print(f"⚠️ Error output: {result.stderr[:200]}")
-                    continue  # Try again
+                print(f"Return code: {result.returncode}")
+                if result.stderr:
+                    print(f"STDERR: {result.stderr}")
 
                 output = result.stdout.strip()
-                print(f"🔍 Raw LLM output length: {len(output)}")
-                print(f"🔍 First 100 chars: {repr(output[:100])}")
-                
-                if len(output) < 5:  # Too short
+                print(f"Raw LLM output (full):\n{output}\n---END OUTPUT---")
+                print(f"Raw LLM output length: {len(output)}")
+
+                if len(output) < 5:
                     print("⚠️ Output too short, trying again...")
-                    continue  # Try again
-                
+                    continue
+
                 entities = self._parse_json_response(output, entity_types)
-                if entities:  # Success!
-                    print(f"✅ Successfully parsed {len(entities)} entities")
+                if entities:
+                    print(f"✅ Successfully parsed {len(entities)} entities - stopping attempts")
+                    print("===== LLM DEBUG END =====\n")
                     return entities
                 else:
                     print("⚠️ No entities found in response, trying again...")
-                    
-            except subprocess.TimeoutExpired:
-                print(f"⚠️ Subprocess timeout after {dynamic_timeout:.1f}s, trying again...")
-                continue  # Try again
+                    print("===== LLM DEBUG END =====\n")
+            except subprocess.TimeoutExpired as e:
+                print(f"⚠️ Subprocess timeout (should not occur, timeout removed)")
+                break
             except UnicodeDecodeError as e:
                 print(f"⚠️ Unicode decode error: {e}, trying again...")
-                continue  # Try again
+                break
             except Exception as e:
                 print(f"⚠️ Subprocess error: {e}, trying again...")
-                continue  # Try again
-                
-        return []  # All attempts failed
+                break
+        return []
 
     def _spacy_fallback(self, text):
         """Fallback to SpaCy when LLM fails completely"""
         try:
-            from detectors.spacy_detector import SpacyDetector
+            # Fixed import path for new agent-intelligent structure
+            from .spacy_detector import SpacyDetector
             spacy_detector = SpacyDetector()
             print("✅ Using SpaCy as backup detector")
             return spacy_detector.detect(text)
+        except ImportError as e:
+            print(f"❌ SpaCy detector import failed: {e}")
+            print("🔄 Attempting alternative import...")
+            try:
+                # Alternative import path
+                from src.agent.tools.detectors.spacy_detector import SpacyDetector
+                spacy_detector = SpacyDetector()
+                print("✅ Using SpaCy as backup detector (alternative path)")
+                return spacy_detector.detect(text)
+            except Exception as e2:
+                print(f"❌ All SpaCy import attempts failed: {e2}")
+                return []
         except Exception as e:
-            print(f"❌ SpaCy fallback also failed: {e}")
+            print(f"❌ SpaCy fallback execution failed: {e}")
             return []
 
     def _parse_json_response(self, output: str, entity_types):

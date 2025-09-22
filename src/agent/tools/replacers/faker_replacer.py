@@ -1,9 +1,12 @@
+
 from faker import Faker
 import random
+import re
 
 class FakerReplacer:
     def __init__(self):
-        self.faker = Faker(['en_US', 'fr_FR'])  # Support both English and French
+        self.default_locales = ['en_US', 'fr_FR']
+        self.faker = Faker(self.default_locales)
         self.replacements = {}
         self.entity_types = {}  # Track entity types for each replacement
         
@@ -23,22 +26,45 @@ class FakerReplacer:
             "Enterprise Excellence Group"
         ]
 
+    def _is_arabic(self, text: str) -> bool:
+        # Detect if the text contains a significant amount of Arabic characters
+        # Arabic Unicode range: \u0600-\u06FF, \u0750-\u077F, \u08A0-\u08FF, \uFB50-\uFDFF, \uFE70-\uFEFF
+        arabic_chars = re.findall(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]', text)
+        return len(arabic_chars) > 10 or (len(arabic_chars) > 0 and len(arabic_chars) / max(1, len(text)) > 0.2)
+
+    def _get_faker_for_text(self, text: str):
+        if self._is_arabic(text):
+            return Faker('ar')
+        return Faker(self.default_locales)
+
     def _get_smart_replacement(self, text: str, entity_type: str) -> str:
         """Generate contextually appropriate replacements"""
+        faker = self._get_faker_for_text(text)
         if entity_type == "PERSON":
-            return self.faker.name()
+            return faker.name()
         elif entity_type in ["GPE", "LOCATION"]:
-            # Handle both geographical and location entities
+            # Smart location replacement
             text_lower = text.lower()
-            if any(word in text_lower for word in ['street', 'avenue', 'road', 'boulevard', 'lane', 'drive', 'rue', 'avenue']):
-                # Street names
-                return self.faker.street_name()
-            elif any(word in text_lower for word in ['main st', 'first st', 'second st', 'oak st', 'elm st']):
-                # Common street patterns
-                return f"{random.choice(['Oak', 'Elm', 'Pine', 'Maple', 'Cedar', 'First', 'Second', 'Third'])} {random.choice(['Street', 'Avenue', 'Road'])}"
+            # Address/Street
+            if any(word in text_lower for word in ['street', 'st.', 'avenue', 'road', 'boulevard', 'lane', 'drive', 'rue', 'avenue', 'blvd', 'rd', 'dr', 'str', 'شارع', 'طريق', 'avenue', 'avenue']):
+                return faker.street_address()
+            # Country
+            elif any(word in text_lower for word in ['country', 'nation', 'دولة', 'بلد', 'republic', 'kingdom', 'emirate', 'state', 'province', 'country:', 'country -']):
+                return faker.country()
+            # City
+            elif any(word in text_lower for word in ['city', 'ville', 'مدينة', 'town', 'capital', 'metropolis', 'urban', 'city:', 'city -']):
+                return faker.city()
+            # If the text looks like a postal code
+            elif re.match(r'\b\d{5}(?:-\d{4})?\b', text):
+                return faker.postcode()
+            # Fallback: try city, then country
             else:
-                # Cities, states, countries
-                return self.faker.city()
+                # Try to avoid person names by checking if city looks like a person
+                city = faker.city()
+                # If city is a single word and looks like a name, use country instead
+                if len(city.split()) == 1 and city[0].isupper() and city.isalpha():
+                    return faker.country()
+                return city
         elif entity_type in ["ORG", "ORGANIZATION"]:
             # Smart organization replacement based on context
             text_lower = text.lower()
@@ -47,14 +73,13 @@ class FakerReplacer:
             elif any(word in text_lower for word in ['consulting', 'conseil', 'advisory', 'partners']):
                 return random.choice(self.consulting_firms)
             else:
-                return self.faker.company()
+                return faker.company()
         elif entity_type == "EMAIL":
-            return self.faker.email()
+            return faker.email()
         elif entity_type == "PHONE":
-            return self.faker.phone_number()
+            return faker.phone_number()
         elif entity_type == "AGE":
             # Extract the number and generate a similar age
-            import re
             age_match = re.search(r'\d+', text)
             if age_match:
                 original_age = int(age_match.group())

@@ -1,6 +1,18 @@
 // Clean JavaScript for SecureDoc - Data Privacy Tool
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
+    // Reset button state if returning via back/forward navigation
+    window.addEventListener('pageshow', function(event) {
+        // Only run on the main page with the text form
+        const submitBtn = document.getElementById('textSubmitBtn');
+        if (submitBtn) {
+            resetButtonFromProgressBar(submitBtn);
+        }
+        const uploadBtn = document.getElementById('uploadBtn');
+        if (uploadBtn) {
+            resetButtonFromProgressBar(uploadBtn);
+        }
+    });
 });
 
 function initializeApp() {
@@ -102,10 +114,12 @@ function setupFormValidation() {
                 alert('Please enter some text to anonymize.');
                 textInput.focus();
             } else {
-                // Show loading state
+                // Transform button into progress bar and allow form submission
                 const submitBtn = document.getElementById('textSubmitBtn');
-                submitBtn.innerHTML = 'Processing...';
-                submitBtn.disabled = true;
+                const detectionMethod = document.querySelector('input[name="detector"]:checked').value;
+                
+                transformButtonToProgressBar(submitBtn, detectionMethod, 'text');
+                // Form will submit normally and redirect to loading page
             }
         });
     }
@@ -117,10 +131,12 @@ function setupFormValidation() {
                 e.preventDefault();
                 alert('Please select a file to upload.');
             } else {
-                // Show loading state
+                // Transform button into progress bar and allow form submission
                 const uploadBtn = document.getElementById('uploadBtn');
-                uploadBtn.innerHTML = 'Uploading...';
-                uploadBtn.disabled = true;
+                const detectionMethod = document.querySelector('input[name="detector"]:checked').value;
+                
+                transformButtonToProgressBar(uploadBtn, detectionMethod, 'file');
+                // Form will submit normally and redirect to loading page
             }
         });
     }
@@ -130,22 +146,16 @@ function setupTextInput() {
     const textInput = document.getElementById('textInput');
     if (!textInput) return;
     
-    // Auto-resize textarea
-    textInput.addEventListener('input', function() {
+    // Auto-resize textarea and enable/disable button based on content
+    function handleTextInputEvent() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-    });
-    
-    // Character counter (optional)
-    const maxLength = 10000;
-    textInput.setAttribute('maxlength', maxLength);
-    
-    textInput.addEventListener('input', function() {
+
+        const maxLength = 10000;
         const remaining = maxLength - this.value.length;
         const submitBtn = document.getElementById('textSubmitBtn');
-        
+
         if (remaining < 100) {
-            // Show warning when approaching limit
             if (!document.getElementById('charCounter')) {
                 const counter = document.createElement('div');
                 counter.id = 'charCounter';
@@ -154,11 +164,10 @@ function setupTextInput() {
             }
             document.getElementById('charCounter').textContent = `${remaining} characters remaining`;
         } else {
-            // Remove counter when not needed
             const counter = document.getElementById('charCounter');
             if (counter) counter.remove();
         }
-        
+
         // Enable/disable submit button based on content
         if (this.value.trim().length > 0) {
             submitBtn.disabled = false;
@@ -167,7 +176,101 @@ function setupTextInput() {
             submitBtn.disabled = true;
             submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
+    }
+
+    // Character counter (optional)
+    const maxLength = 10000;
+    textInput.setAttribute('maxlength', maxLength);
+
+    textInput.addEventListener('input', handleTextInputEvent);
+    textInput.addEventListener('change', handleTextInputEvent);
+    textInput.addEventListener('paste', function(e) {
+        // Wait for paste to complete
+        setTimeout(() => handleTextInputEvent.call(this, e), 0);
     });
+
+    // On page load, always check and update button state (handles autofill, browser restore, etc)
+    window.addEventListener('DOMContentLoaded', () => handleTextInputEvent.call(textInput));
+    window.addEventListener('pageshow', () => handleTextInputEvent.call(textInput));
+    // Also run immediately in case of direct script load
+    setTimeout(() => handleTextInputEvent.call(textInput), 0);
+}
+
+// Transform button into simple progress bar
+function transformButtonToProgressBar(button, detectionMethod, type) {
+    if (!button) return;
+    
+    // Store original button content
+    button.setAttribute('data-original-text', button.innerHTML);
+    button.disabled = true;
+    
+    // Determine processing time based on method
+    const isLLM = detectionMethod === 'llm';
+    const processingTime = isLLM ? 35 : 8; // seconds - more realistic timing
+    
+    // Replace button content with progress bar
+    button.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="text-sm">${isLLM ? '🤖 AI Processing...' : '⚡ Processing...'}</span>
+            <span id="percent-${button.id}" class="text-sm font-bold">0%</span>
+        </div>
+        <div class="mt-2 w-full bg-white bg-opacity-30 rounded-full h-3">
+            <div id="bar-${button.id}" class="bg-white h-3 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+        </div>
+    `;
+    
+    // Start the progress animation
+    animateProgress(button.id, processingTime);
+}
+
+// Animate the progress bar
+function animateProgress(buttonId, totalTime) {
+    const progressBar = document.getElementById(`bar-${buttonId}`);
+    const percentText = document.getElementById(`percent-${buttonId}`);
+    
+    if (!progressBar || !percentText) return;
+    
+    let progress = 0;
+    const updateInterval = 800; // Update every 800ms
+    const incrementPerUpdate = (100 / totalTime) * (updateInterval / 1000);
+    
+    const progressInterval = setInterval(() => {
+        // Add some randomness but keep it moving forward
+        const randomIncrement = incrementPerUpdate + (Math.random() - 0.5) * 2;
+        progress = Math.min(progress + Math.max(randomIncrement, 0.5), 95);
+        
+        // Update the UI
+        progressBar.style.width = `${progress}%`;
+        percentText.textContent = `${Math.round(progress)}%`;
+        
+        // Stop at 95% - let the server complete it
+        if (progress >= 95) {
+            clearInterval(progressInterval);
+            percentText.textContent = '95%';
+        }
+    }, updateInterval);
+    
+    // Store interval for cleanup
+    window[`progressInterval_${buttonId}`] = progressInterval;
+}
+
+// Reset button to original state (for error handling)
+function resetButtonFromProgressBar(button) {
+    if (!button) return;
+    
+    const originalText = button.getAttribute('data-original-text');
+    if (originalText) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        button.removeAttribute('data-original-text');
+        
+        // Clear any running intervals
+        const intervalId = window[`progressInterval_${button.id}`];
+        if (intervalId) {
+            clearInterval(intervalId);
+            delete window[`progressInterval_${button.id}`];
+        }
+    }
 }
 
 // Utility function for smooth scrolling
@@ -176,6 +279,67 @@ function smoothScrollTo(element) {
         behavior: 'smooth',
         block: 'center'
     });
+}
+
+// Global loading overlay for LLM processing
+function showGlobalLoading() {
+    // Create loading overlay if it doesn't exist
+    let overlay = document.getElementById('globalLoadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'globalLoadingOverlay';
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+            <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">AI Processing</h3>
+                <p class="text-gray-600 mb-4">Our advanced AI is analyzing your content...</p>
+                <div class="text-sm text-gray-500">
+                    <p>🤖 Using Mistral LLM for accurate detection</p>
+                    <p>⏱️ This may take 30-60 seconds</p>
+                    <p>☕ Please be patient while we ensure quality results</p>
+                </div>
+                <div class="mt-4 bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 75%"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+}
+
+function hideGlobalLoading() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+// Setup timeout warning for LLM processing (works with progress bars)
+function setupTimeoutWarning() {
+    // Show extended time warning after 45 seconds
+    setTimeout(() => {
+        updateProgressMessage('Taking longer than expected... Please wait');
+    }, 45000);
+    
+    // Show additional info after 75 seconds
+    setTimeout(() => {
+        updateProgressMessage('Complex analysis in progress... Almost done');
+    }, 75000);
+}
+
+function updateProgressMessage(message) {
+    // Update both text and file progress messages if they exist
+    const textProgress = document.getElementById('progress-text-textSubmitBtn');
+    const fileProgress = document.getElementById('progress-text-uploadBtn');
+    
+    if (textProgress) {
+        textProgress.textContent = message;
+    }
+    if (fileProgress) {
+        fileProgress.textContent = message;
+    }
 }
 
 // Privacy-focused messaging

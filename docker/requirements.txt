@@ -15,11 +15,6 @@ reportlab==4.2.5
 # Fake Data Generation
 Faker==37.6.0
 
-# LangGraph & LangChain (Optional - for advanced workflows)
-langgraph==0.6.3
-langchain==0.3.27
-langchain-community==0.3.27
-
 # HTTP Client (for LLM calls)
 httpx==0.28.1
 
