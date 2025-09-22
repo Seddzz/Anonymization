@@ -1,3 +1,7 @@
+/* Fade animation for progress bar when stuck at 95% */
+.progress-fade {
+  transition: opacity 0.7s;
+}
 /* Clean, Simple Styles for SecureDoc */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 

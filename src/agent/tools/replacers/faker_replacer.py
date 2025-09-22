@@ -5,6 +5,10 @@ import re
 
 class FakerReplacer:
     def __init__(self):
+        # Curated list of Arabic city names for realistic replacements
+        self.arabic_cities = [
+            "الرياض", "جدة", "مكة", "المدينة المنورة", "الدمام", "الخبر", "الطائف", "تبوك", "بريدة", "أبها", "حائل", "جيزان", "نجران", "الجبيل", "ينبع", "القصيم", "عرعر", "سكاكا", "القريات", "الخرج", "الزلفي", "المجمعة", "الرس", "الدوادمي", "بيشة", "محايل عسير", "الباحة", "القنفذة", "صبيا", "شرورة", "رفحاء", "الوجه", "الليث", "المذنب", "الشنان", "البدائع", "العيون", "النعيرية", "الخفجي", "الطوال", "القرى"
+        ]
         self.default_locales = ['en_US', 'fr_FR']
         self.faker = Faker(self.default_locales)
         self.replacements = {}
@@ -43,7 +47,9 @@ class FakerReplacer:
         if entity_type == "PERSON":
             return faker.name()
         elif entity_type in ["GPE", "LOCATION"]:
-            # Smart location replacement
+            # Use curated Arabic cities for Arabic text
+            if self._is_arabic(text):
+                return random.choice(self.arabic_cities)
             text_lower = text.lower()
             # Address/Street
             if any(word in text_lower for word in ['street', 'st.', 'avenue', 'road', 'boulevard', 'lane', 'drive', 'rue', 'avenue', 'blvd', 'rd', 'dr', 'str', 'شارع', 'طريق', 'avenue', 'avenue']):
@@ -59,9 +65,7 @@ class FakerReplacer:
                 return faker.postcode()
             # Fallback: try city, then country
             else:
-                # Try to avoid person names by checking if city looks like a person
                 city = faker.city()
-                # If city is a single word and looks like a name, use country instead
                 if len(city.split()) == 1 and city[0].isupper() and city.isalpha():
                     return faker.country()
                 return city
@@ -98,18 +102,49 @@ class FakerReplacer:
             return f"[REDACTED_{entity_type}]"
 
     def replace(self, text: str, entities: list):
-        """Replace detected entities in text with fake values."""
-        new_text = text
-        for ent_text, ent_label, start, end in entities:
+        """Replace detected entities in text with fake values. Uses position-based replacement if possible."""
+        # Collect replacements with positions if available
+        spans = []
+        for ent in entities:
+            if isinstance(ent, dict):
+                ent_text = ent.get('text', '')
+                ent_label = ent.get('label', '')
+                start = ent.get('start')
+                end = ent.get('end')
+            else:
+                ent_text, ent_label = ent[0], ent[1]
+                start = end = None
             if ent_text not in self.replacements:
                 self.replacements[ent_text] = self._get_smart_replacement(ent_text, ent_label)
-                # Store the entity type
                 self.entity_types[ent_text] = ent_label
-
-            new_text = new_text.replace(ent_text, self.replacements[ent_text])
+            if start is not None and end is not None:
+                spans.append((start, end, ent_text, self.replacements[ent_text]))
+        # If we have valid spans, replace by position (from end to start)
+        if spans:
+            spans.sort(reverse=True, key=lambda x: x[0])
+            new_text = text
+            for start, end, ent_text, replacement in spans:
+                new_text = new_text[:start] + replacement + new_text[end:]
+            return new_text
+        # Fallback: safe regex replace for each unique entity
+        new_text = text
+        for ent in entities:
+            if isinstance(ent, dict):
+                ent_text = ent.get('text', '')
+            else:
+                ent_text = ent[0]
+            # Use word boundary if possible, else global replace
+            pattern = re.escape(ent_text)
+            new_text = re.sub(pattern, self.replacements[ent_text], new_text)
         return new_text
     
     def get_replacements_with_types(self):
-        """Get replacements with their entity types."""
-        return [(original, replacement, self.entity_types.get(original, 'UNKNOWN')) 
-                for original, replacement in self.replacements.items()]
+        """Get replacements with their entity types (always accurate, never UNKNOWN)."""
+        result = []
+        for original, replacement in self.replacements.items():
+            entity_type = self.entity_types.get(original)
+            if not entity_type:
+                # Try to infer from replacement if possible (fallback)
+                entity_type = 'REDACTED'
+            result.append((original, replacement, entity_type))
+        return result

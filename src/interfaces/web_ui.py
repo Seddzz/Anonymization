@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.file_processor import extract_text_from_file
 from utils.document_processor import DocumentProcessor
 from agent.executor import AnonymizerPipeline
+from agent.tools.detectors.llm_detector import LLMDetector
 import tempfile
 
 # Load environment variables (including PYTHONDONTWRITEBYTECODE=1)
@@ -34,8 +35,12 @@ load_dotenv()
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
 
+
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'your-secret-key-change-in-production'  # For session management
+
+# Persistent LLMDetector instance for live editing mode
+persistent_llm_detector = LLMDetector()
 
 # Import the anonymization pipeline
 from agent.executor import AnonymizerPipeline
@@ -51,8 +56,11 @@ def run_anonymization_task(task_id, input_data, detector_type, data_type):
         background_tasks[task_id]['status'] = 'processing'
         background_tasks[task_id]['progress'] = 10
         
-        # Always use the detector selected by the user
-        pipeline = AnonymizerPipeline(detector=detector_type)
+        # Always use the detector selected by the user, supporting persistent LLM
+        if detector_type == 'llm':
+            pipeline = AnonymizerPipeline(detector=persistent_llm_detector)
+        else:
+            pipeline = AnonymizerPipeline(detector=detector_type)
         if data_type == 'text':
             # Process text (LLM allowed for short text)
             background_tasks[task_id]['progress'] = 30
@@ -202,13 +210,29 @@ def result():
     replacement_mapping = result_data.get('replacement_mapping', {})
     entity_info = result_data.get('entity_info', {})
     
-    for original, replacement in replacement_mapping.items():
-        entity_type = entity_info.get(original, 'UNKNOWN')
-        changes.append({
-            'type': entity_type,
-            'original': original,
-            'replacement': replacement
-        })
+    # Use replacer's get_replacements_with_types if available for accurate types
+    changes = []
+    if hasattr(replacement_mapping, 'items') and hasattr(result_data, 'get'):
+        # Try to use replacer logic if available in session
+        if 'replacer_types' in result_data:
+            changes = result_data['replacer_types']
+        elif 'get_replacements_with_types' in dir():
+            # Not available in session, fallback to old logic
+            for original, replacement in replacement_mapping.items():
+                entity_type = entity_info.get(original, 'UNKNOWN')
+                changes.append({
+                    'type': entity_type,
+                    'original': original,
+                    'replacement': replacement
+                })
+        else:
+            for original, replacement in replacement_mapping.items():
+                entity_type = entity_info.get(original, 'UNKNOWN')
+                changes.append({
+                    'type': entity_type,
+                    'original': original,
+                    'replacement': replacement
+                })
     
     return render_template('result.html', 
                          result=result_data,
@@ -291,7 +315,10 @@ def handle_custom_file_upload(file, entity_types, detection_method):
             return jsonify({'success': False, 'error': 'Unsupported file type'})
         
         # Create pipeline with selected detection method
-        pipeline = AnonymizerPipeline(detector=detection_method)
+        if detection_method == 'llm':
+            pipeline = AnonymizerPipeline(detector=persistent_llm_detector)
+        else:
+            pipeline = AnonymizerPipeline(detector=detection_method)
         
         # Create document processor
         doc_processor = DocumentProcessor(pipeline)
@@ -366,7 +393,10 @@ def handle_custom_text_input(input_text, entity_types, detection_method):
         print(f"Detection method: {detection_method}")
         
         # Create pipeline with selected detection method
-        pipeline = AnonymizerPipeline(detector=detection_method)
+        if detection_method == 'llm':
+            pipeline = AnonymizerPipeline(detector=persistent_llm_detector)
+        else:
+            pipeline = AnonymizerPipeline(detector=detection_method)
         
         # Anonymize with custom entity types (with timeout handling)
         try:
@@ -427,9 +457,17 @@ def anonymize():
         # Check if the request contains text data
         if 'text' in request.form and request.form['text'].strip():
             input_text = request.form['text'].strip()
-            detector_type = request.form.get('detector', 'spacy')
-            print(f"Received text for anonymization: {input_text[:50]}... | Detector: {detector_type}")
-            pipeline = AnonymizerPipeline(detector=detector_type)
+            # Default to LLM for live editing mode
+            detector_type = request.form.get('detector', 'llm')
+            print(f"[DEBUG] Received text for anonymization (first 100 chars): {input_text[:100]}")
+            print(f"[DEBUG] Detector selected: {detector_type}")
+            if detector_type == 'llm':
+                print(f"[DEBUG] Full text sent to LLM (repr): {repr(input_text)}")
+            # Use persistent LLMDetector if live mode and LLM selected
+            if detector_type == 'llm':
+                pipeline = AnonymizerPipeline(detector=persistent_llm_detector)
+            else:
+                pipeline = AnonymizerPipeline(detector=detector_type)
             result = pipeline.anonymize(input_text)
             entities_found = len(result['replacement_mapping'])
             session['anonymization_result'] = {

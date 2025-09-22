@@ -1,28 +1,51 @@
+def extract_valid_entities(parsed_entities):
+    VALID_LABELS = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION", "ORG"]
+    valid_entities = []
+    for entity in parsed_entities:
+        raw_label = entity.get("label", "").strip()
+        text = entity.get("text", "").strip()
+        # Split labels like "PERSON|AGE"
+        labels = [lbl for lbl in raw_label.split("|") if lbl in VALID_LABELS]
+        if not labels:
+            print(f"❌ Invalid label: {raw_label} (valid: {VALID_LABELS})")
+            continue
+        for label in labels:
+            print(f"✅ Valid entity: {text} ({label})")
+            # Preserve start/end if present
+            valid_entity = {"text": text, "label": label}
+            if "start" in entity:
+                valid_entity["start"] = entity["start"]
+            if "end" in entity:
+                valid_entity["end"] = entity["end"]
+            valid_entities.append(valid_entity)
+    if not valid_entities:
+        print("⚠️ No valid entities found in LLM output.")
+    print(f"🎯 Total valid entities: {len(valid_entities)}")
+    return valid_entities
 import subprocess
 import json
 import re
 import ollama
 
 class LLMDetector:
-    def __init__(self, model="mistral"):
+    def __init__(self, model="llama3"):
         self.model = model
         self.client = ollama.Client()  # persistent connection
 
     def detect(self, text, entity_types=None):
         if entity_types is None:
             entity_types = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION"]
-
-        entity_types_str = "|".join(entity_types)
-        prompt = f"""Extract personal info from text. Return JSON array only.
-Types: {entity_types_str}
-Format: [{{"text":"found_text","label":"PERSON","start":0,"end":5}}]
-Text: {text}
-JSON:"""
-
-        response = self.client.chat(model=self.model, messages=[{"role": "user", "content": prompt}])
-        output = response['message']['content'].strip()
-
-        return self._parse_json_response(output, entity_types)
+        entity_types_str = ", ".join(entity_types)
+        prompt = (
+            f"Extract all entities from the following text. "
+            f"Return only a valid JSON array, where each item is an object with exactly two keys: 'text' (the entity value) and 'label' (one of: {entity_types_str}). "
+            f"Do not include any explanations, comments, or extra objects. Do not add any keys other than 'text' and 'label'. "
+            f"If there are no entities, return an empty array []. "
+            f"The output must be valid JSON and nothing else.\n"
+            f"Text: {text}\nJSON:"
+        )
+        # Always use _attempt_detection for LLM calls (subprocess with debug, retries, and robust parsing)
+        return self._attempt_detection(prompt, text, entity_types)
 
 
         try:
@@ -62,29 +85,15 @@ JSON:"""
             try:
                 print(f"\n===== LLM DEBUG START (Attempt {attempt + 1}/2) =====")
                 print(f"Prompt sent to Ollama (model: {self.model}):\n{prompt}\n---END PROMPT---")
-                print(f"Command: ollama run {self.model}")
-                print(f"Timeout: unlimited (no timeout)")
-                result = subprocess.run(
-                    ["ollama", "run", self.model],
-                    input=prompt,
-                    text=True,
-                    capture_output=True,
-                    encoding="utf-8",
-                    errors="ignore"  # Ignore encoding errors
-                )
-
-                print(f"Return code: {result.returncode}")
-                if result.stderr:
-                    print(f"STDERR: {result.stderr}")
-
-                output = result.stdout.strip()
+                print(f"Using Ollama Python API (persistent server mode)")
+                # Use Ollama Python API for persistent, fast calls
+                response = self.client.chat(model=self.model, messages=[{"role": "user", "content": prompt}])
+                output = response['message']['content'].strip()
                 print(f"Raw LLM output (full):\n{output}\n---END OUTPUT---")
                 print(f"Raw LLM output length: {len(output)}")
-
                 if len(output) < 5:
                     print("⚠️ Output too short, trying again...")
                     continue
-
                 entities = self._parse_json_response(output, entity_types)
                 if entities:
                     print(f"✅ Successfully parsed {len(entities)} entities - stopping attempts")
@@ -93,15 +102,9 @@ JSON:"""
                 else:
                     print("⚠️ No entities found in response, trying again...")
                     print("===== LLM DEBUG END =====\n")
-            except subprocess.TimeoutExpired as e:
-                print(f"⚠️ Subprocess timeout (should not occur, timeout removed)")
-                break
-            except UnicodeDecodeError as e:
-                print(f"⚠️ Unicode decode error: {e}, trying again...")
-                break
             except Exception as e:
-                print(f"⚠️ Subprocess error: {e}, trying again...")
-                break
+                print(f"⚠️ Ollama API error: {e}, trying again...")
+                continue
         return []
 
     def _spacy_fallback(self, text):
@@ -153,86 +156,65 @@ JSON:"""
                     # Try with aggressive fixes
                     fixed = self._aggressive_json_fix(json_str)
                     entities_data = json.loads(fixed)
-                
-                # Success! Process entities
-                entities = []
-                print(f"🔍 Parsed JSON data: {entities_data}")
-                
-                for entity in entities_data:
-                    print(f"🔍 Processing entity: {entity}")
-                    if self._is_valid_entity_format(entity, entity_types):
-                        # Handle missing start/end positions
-                        start_pos = entity.get('start', 0)
-                        end_pos = entity.get('end', len(entity['text']))
-                        
-                        # If positions are missing, try to find them in the original text
-                        if start_pos == 0 and end_pos == len(entity['text']):
-                            text_to_find = str(entity['text']).strip()
-                            found_pos = output.find(text_to_find)
-                            if found_pos != -1:
-                                start_pos = found_pos
-                                end_pos = found_pos + len(text_to_find)
-                        
-                        entities.append((
-                            str(entity['text']).strip(), 
-                            str(entity['label']).strip(), 
-                            int(start_pos), 
-                            int(end_pos)
-                        ))
-                        print(f"✅ Added entity: {entity['text']} ({entity['label']})")
-                    else:
-                        print(f"❌ Invalid entity format: {entity}")
-                
-                print(f"🎯 Total valid entities: {len(entities)}")
-                return entities
-                
+                # --- Robust post-processing: filter only valid dicts with 'text' and 'label' ---
+                if isinstance(entities_data, list):
+                    filtered = [e for e in entities_data if isinstance(e, dict) and 'text' in e and 'label' in e]
+                else:
+                    filtered = []
+                print(f"🔍 Parsed JSON data (filtered): {filtered}")
+                valid_entities = extract_valid_entities(filtered)
+                return valid_entities
             except (json.JSONDecodeError, ValueError, KeyError):
                 continue  # Try next fix level
-                
+        # --- Fallback: try to extract valid entity objects with regex if all parsing fails ---
+        import re
+        pattern = r'\{\s*"text"\s*:\s*"(.*?)"\s*,\s*"label"\s*:\s*"(.*?)"\s*\}'
+        matches = re.findall(pattern, json_str)
+        filtered = [{"text": m[0], "label": m[1]} for m in matches]
+        if filtered:
+            print(f"🔍 Regex fallback extracted entities: {filtered}")
+            return extract_valid_entities(filtered)
         return []  # All parsing attempts failed
 
     def _fix_json_format(self, json_str: str) -> str:
         """Fix common JSON formatting issues from LLM output"""
+        import re
+        # Remove // comments
+        json_str = re.sub(r'//.*', '', json_str)
         # Fix double-escaped quotes first
-        json_str = json_str.replace('\\\\"', '"')
-        json_str = json_str.replace("\\\\'", "'")
-        
+        json_str = json_str.replace('\\"', '"')
+        json_str = json_str.replace("\\'", "'")
         # Fix escaped quotes (common issue)
         json_str = json_str.replace('\\"', '"')
         json_str = json_str.replace("\\'", "'")
-        
         # Replace single quotes with double quotes
         json_str = json_str.replace("'", '"')
-        
         # Basic cleanup of common patterns
         json_str = json_str.replace('text:', '"text":')
         json_str = json_str.replace('label:', '"label":')
         json_str = json_str.replace('start:', '"start":')
         json_str = json_str.replace('end:', '"end":')
-        
         return json_str
     
     def _aggressive_json_fix(self, json_str: str) -> str:
         """More aggressive JSON fixing for very messy responses"""
+        import re
         # Remove markdown code blocks
         fixed = re.sub(r'```json\s*', '', json_str)
         fixed = re.sub(r'```\s*', '', fixed)
-        
+        # Remove // comments
+        fixed = re.sub(r'//.*', '', fixed)
         # Remove extra text before/after
         fixed = re.sub(r'^[^[]*\[', '[', fixed)
         fixed = re.sub(r'\][^\]]*$', ']', fixed)
-        
         # Fix broken quotes and escaping
         fixed = re.sub(r'(?<!\\)"([^"]*)"(?=\s*:)', r'"\1"', fixed)  # Fix keys
         fixed = re.sub(r':\s*"([^"]*)"(?=\s*[,}])', r': "\1"', fixed)  # Fix values
-        
         # Fix trailing commas
         fixed = re.sub(r',\s*}', '}', fixed)
         fixed = re.sub(r',\s*]', ']', fixed)
-        
         # Fix missing commas
         fixed = re.sub(r'}\s*{', '}, {', fixed)
-        
         return fixed
 
     def _is_valid_entity_format(self, entity, entity_types):

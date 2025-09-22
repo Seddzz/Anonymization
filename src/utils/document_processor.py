@@ -1,3 +1,25 @@
+def fast_anonymize_docx(doc, valid_entities):
+    """
+    Efficiently anonymize a python-docx Document object using valid_entities.
+    valid_entities: list of dicts with 'text' and 'label' (and optionally 'start', 'end')
+    """
+    # Build a replacement map (longest first to avoid partial overlaps)
+    replacements = {e['text']: None for e in valid_entities}
+    for e in valid_entities:
+        if replacements[e['text']] is None:
+            replacements[e['text']] = f"[{e['label']}]"
+
+    sorted_replacements = sorted(replacements.items(), key=lambda x: -len(x[0]))
+
+    for para in doc.paragraphs:
+        orig = para.text
+        new = orig
+        for old, new_val in sorted_replacements:
+            if old and old in new:
+                new = new.replace(old, new_val)
+        if new != orig:
+            para.text = new
+    return doc
 """
 Document Processor - Handles anonymization while preserving document structure
 """
@@ -111,59 +133,43 @@ class DocumentProcessor:
     
     def anonymize_docx(self, file_path, output_path=None):
         """
-        Anonymize a DOCX file while preserving structure and formatting
+        Anonymize a DOCX file while preserving structure and formatting (FAST VERSION)
         """
         try:
-            # Load the document
+            import time
+            from agent.tools.detectors.llm_detector import extract_valid_entities
+            print(f"[LOG] Loading DOCX: {file_path}")
             doc = Document(file_path)
-            
-            # Extract all text for anonymization mapping
+            print("[LOG] Extracting text from DOCX...")
             full_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-            
-            # Get anonymization mappings
+            print(f"[LOG] Text extraction complete. Length: {len(full_text)}")
+            print("[LOG] Calling LLM detector...")
+            t0 = time.time()
             entities = self.pipeline.detector.detect(full_text)
-            
-            # Get replacement mapping from replacer
-            anonymized_full_text = self.pipeline.anonymize(full_text)
-            replacer_details = self.pipeline.replacer.get_replacements_with_types()
-            
-            replacement_mapping = {}
-            for original, replacement, entity_type in replacer_details:
-                replacement_mapping[original] = replacement
-            
-            # Apply replacements to each paragraph while preserving formatting
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    original_text = paragraph.text
-                    new_text = original_text
-                    
-                    # Apply all replacements
-                    for original, replacement in replacement_mapping.items():
-                        new_text = new_text.replace(original, replacement)
-                    
-                    # Update paragraph text if it changed
-                    if new_text != original_text:
-                        # Clear existing runs and add new text
-                        paragraph.clear()
-                        paragraph.add_run(new_text)
-            
-            # Save anonymized document
+            print(f"[LOG] LLM detector finished in {time.time() - t0:.2f}s. Entity count: {len(entities)}")
+            print("[LOG] Extracting valid entities...")
+            valid_entities = extract_valid_entities(entities)
+            print(f"[LOG] Valid entities extracted: {len(valid_entities)}")
+            print("[LOG] Starting fast anonymization of DOCX...")
+            t1 = time.time()
+            doc = fast_anonymize_docx(doc, valid_entities)
+            print(f"[LOG] Fast anonymization finished in {time.time() - t1:.2f}s")
             if output_path is None:
                 output_path = file_path.replace('.docx', '_anonymized.docx')
-            
+            print(f"[LOG] Saving anonymized DOCX to {output_path}")
             doc.save(output_path)
-            
+            print("[LOG] DOCX anonymization complete.")
             return {
                 'success': True,
                 'output_path': output_path,
                 'original_text': full_text,
-                'anonymized_text': anonymized_full_text,
-                'replacement_mapping': replacement_mapping,
+                'anonymized_text': None,  # Not needed for docx
+                'replacement_mapping': {e['text']: f"[{e['label']}]" for e in valid_entities},
                 'message': f'DOCX anonymized successfully: {os.path.basename(output_path)}',
                 'file_type': 'docx'
             }
-            
         except Exception as e:
+            print(f"[ERROR] DOCX anonymization failed: {e}")
             return {
                 'success': False,
                 'error': f'Error processing DOCX: {str(e)}'
@@ -245,49 +251,31 @@ class DocumentProcessor:
 
     def anonymize_docx_with_entities(self, file_path, entity_types, output_path=None):
         """
-        Anonymize a DOCX file with custom entity selection while preserving formatting
+        Anonymize a DOCX file with custom entity selection while preserving formatting (FAST VERSION)
         """
         try:
-            # Load the document
+            from agent.tools.detectors.llm_detector import extract_valid_entities
             doc = Document(file_path)
-            
-            # Extract full text for detection
             full_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-            
             # Anonymize with custom entity types using the pipeline
             replacement_result = self.pipeline.anonymize(full_text, entity_types)
-            replacement_mapping = replacement_result['replacement_mapping']
-            
-            # Apply replacements to each paragraph
-            for paragraph in doc.paragraphs:
-                original_text = paragraph.text
-                new_text = original_text
-                
-                # Apply all replacements
-                for original, replacement in replacement_mapping.items():
-                    new_text = new_text.replace(original, replacement)
-                
-                # Update paragraph text if changed
-                if new_text != original_text:
-                    paragraph.text = new_text
-            
-            # Generate output path if not provided
+            # Use valid_entities for anonymization
+            valid_entities = extract_valid_entities([
+                {"text": k, "label": v} for k, v in replacement_result['entity_info'].items()
+            ])
+            doc = fast_anonymize_docx(doc, valid_entities)
             if output_path is None:
                 base_name = os.path.splitext(file_path)[0]
                 output_path = f"{base_name}_anonymized.docx"
-            
-            # Save the modified document
             doc.save(output_path)
-            
             return {
                 'success': True,
                 'original_text': full_text,
-                'anonymized_text': replacement_result['anonymized_text'],
-                'replacement_mapping': replacement_mapping,
+                'anonymized_text': None,
+                'replacement_mapping': {e['text']: f"[{e['label']}]" for e in valid_entities},
                 'entity_info': replacement_result.get('entity_info', {}),
                 'output_path': output_path
             }
-            
         except Exception as e:
             return {
                 'success': False,

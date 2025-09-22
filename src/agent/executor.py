@@ -4,7 +4,10 @@ from .tools.replacers.faker_replacer import FakerReplacer
 
 class AnonymizerPipeline:
     def __init__(self, detector="spacy", replacer=None):
-        if detector == "spacy":
+        # Allow passing a detector instance (persistent LLMDetector)
+        if isinstance(detector, SpacyDetector) or isinstance(detector, LLMDetector):
+            self.detector = detector
+        elif detector == "spacy":
             self.detector = SpacyDetector()
         elif detector == "llm":
             self.detector = LLMDetector()

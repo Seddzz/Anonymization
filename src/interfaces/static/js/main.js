@@ -227,31 +227,34 @@ function transformButtonToProgressBar(button, detectionMethod, type) {
 function animateProgress(buttonId, totalTime) {
     const progressBar = document.getElementById(`bar-${buttonId}`);
     const percentText = document.getElementById(`percent-${buttonId}`);
-    
     if (!progressBar || !percentText) return;
-    
     let progress = 0;
     const updateInterval = 800; // Update every 800ms
     const incrementPerUpdate = (100 / totalTime) * (updateInterval / 1000);
-    
+    let fadeInterval = null;
     const progressInterval = setInterval(() => {
         // Add some randomness but keep it moving forward
         const randomIncrement = incrementPerUpdate + (Math.random() - 0.5) * 2;
         progress = Math.min(progress + Math.max(randomIncrement, 0.5), 95);
-        
         // Update the UI
         progressBar.style.width = `${progress}%`;
         percentText.textContent = `${Math.round(progress)}%`;
-        
         // Stop at 95% - let the server complete it
         if (progress >= 95) {
             clearInterval(progressInterval);
             percentText.textContent = '95%';
+            // Add fade animation to progress bar
+            progressBar.classList.add('progress-fade');
+            let opacity = 1;
+            fadeInterval = setInterval(() => {
+                opacity = opacity === 1 ? 0.5 : 1;
+                progressBar.style.opacity = opacity;
+            }, 700);
         }
     }, updateInterval);
-    
     // Store interval for cleanup
     window[`progressInterval_${buttonId}`] = progressInterval;
+    window[`fadeInterval_${buttonId}`] = fadeInterval;
 }
 
 // Reset button to original state (for error handling)
