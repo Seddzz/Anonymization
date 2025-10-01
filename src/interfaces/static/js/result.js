@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global variables
     window.templateData = templateData;
     
+    console.log('[DEBUG] Template data:', templateData);
+
     // Initialize tabs
     initializeTabs();
     
@@ -184,7 +186,8 @@ function reprocessWithSelection() {
     button.disabled = true;
     
     // Get data from template
-    const sourceText = window.templateData.sourceText;
+    const liveTextArea = document.getElementById('livePreviewText');
+    const liveText = liveTextArea ? liveTextArea.value : '';
     const currentWorkflowType = window.templateData.currentWorkflowType;
     
     // Determine detection method from current workflow
@@ -195,7 +198,7 @@ function reprocessWithSelection() {
     
     // Prepare form data
     const formData = new FormData();
-    formData.append('text', sourceText);
+    formData.append('text', liveText);
     formData.append('detection_method', detectionMethod);
     selectedTypes.forEach(type => {
         formData.append('entity_types', type);
@@ -208,7 +211,7 @@ function reprocessWithSelection() {
     })
     .then(response => {
         if (response.redirected) {
-            // Backend redirects to result page on success
+            // Backend redirects to waiting page for background processing
             window.location.href = response.url;
         } else {
             return response.json();

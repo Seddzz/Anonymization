@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Processing - SecureDoc{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl mx-auto text-center">
+    <div class="mb-12">
+        <h1 class="text-3xl font-semibold text-gray-700">Processing Your Request</h1>
+        <p class="text-lg text-gray-500 mt-2">Please wait while we anonymize your text...</p>
+        
+        <!-- Language Detection Status -->
+        <div id="languageStatus" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+            <p id="languageMessage" class="text-blue-800"></p>
+        </div>
+    </div>
+
+    <!-- Waiting Animation -->
+    <div id="waitingAnimation" class="text-center mt-4">
+        <div class="dot-wave">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+
+    <style>
+        .dot-wave {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dot-wave span {
+            display: block;
+            width: 20px;
+            height: 20px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            animation: wave 1.5s infinite;
+        }
+
+        .dot-wave span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .dot-wave span:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .dot-wave span:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes wave {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-15px);
+            }
+        }
+    </style>
+
+    <script>
+        const taskId = "{{ task_id }}";
+        const checkStatus = () => {
+            fetch(`/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        window.location.href = '/result';
+                    } else if (data.status === 'error') {
+                        const errorMsg = data.error_message || data.error_details || 'An error occurred while processing your request.';
+                        alert('Error: ' + errorMsg);
+                        window.location.href = '/';
+                    } else {
+                        // Update language status if available
+                        if (data.detected_language) {
+                            updateLanguageStatus(data.detected_language, data.will_use_llm, data.auto_switched_to_llm);
+                        }
+                        setTimeout(checkStatus, 1000);
+                    }
+                })
+                .catch(() => {
+                    alert('Failed to check task status. Please try again later.');
+                    window.location.href = '/';
+                });
+        };
+
+        const updateLanguageStatus = (language, willUseLLM, autoSwitchedToLLM) => {
+            const statusDiv = document.getElementById('languageStatus');
+            const messageDiv = document.getElementById('languageMessage');
+            if (statusDiv && messageDiv) {
+                let message = '';
+                if (language === 'ar' && autoSwitchedToLLM) {
+                    message = 'Arabic language detected. Switching to advanced LLM processing for better accuracy.';
+                }
+                if (message) {
+                    messageDiv.textContent = message;
+                    statusDiv.classList.remove('hidden');
+                } else {
+                    statusDiv.classList.add('hidden');
+                }
+            }
+        };
+
+        checkStatus();
+    </script>
+</div>
+{% endblock %}

@@ -12,6 +12,17 @@
             <img src="{{ url_for('static', filename='assets/logo2.png') }}" alt="SecureDoc Logo" class="max-w-xs">
         </div>
         <p class="text-3xl text-gray-600 mb-8">Protect your privacy with secure document anonymization</p>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 border border-red-400 text-red-700{% else %}bg-blue-100 border border-blue-400 text-blue-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
 
     <!-- Mode Selection -->
@@ -47,11 +58,11 @@
                     <div class="flex space-x-6">
                         <label class="flex items-center">
                             <input type="radio" name="detector" value="spacy" checked class="mr-2">
-                            <span class="text-base text-gray-700">SpaCy (Fast)</span>
+                            <span class="text-base text-gray-700">Spacy (Fast, no arabic)</span>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="detector" value="llm" class="mr-2">
-                            <span class="text-base text-gray-700">LLM/Mistral (Advanced)</span>
+                            <span class="text-base text-gray-700">LLM (Advanced)</span>
                         </label>
                     </div>
                 </div>
@@ -65,9 +76,8 @@
                         >{{ request.form.text if request.form.text }}</textarea>
                     <button 
                         type="submit"
-                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-8 rounded-lg font-semibold transition-colors text-lg opacity-50 cursor-not-allowed"
-                        id="textSubmitBtn"
-                        disabled>
+                        class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-8 rounded-lg font-semibold transition-colors text-lg"
+                        id="textSubmitBtn">
                         Anonymize Text
                     </button>
                 </div>
@@ -85,11 +95,11 @@
                     <div class="flex space-x-6">
                         <label class="flex items-center">
                             <input type="radio" name="detector" value="spacy" checked class="mr-3">
-                            <span class="text-lg text-gray-700">SpaCy (Fast)</span>
+                            <span class="text-lg text-gray-700">Spacy (Fast, no arabic)</span>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="detector" value="llm" class="mr-3">
-                            <span class="text-lg text-gray-700">LLM/Mistral (Advanced)</span>
+                            <span class="text-lg text-gray-700">LLM (Advanced)</span>
                         </label>
                     </div>
                 </div>

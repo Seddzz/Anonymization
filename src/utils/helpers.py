@@ -137,3 +137,51 @@ def chunk_list(lst: List[Any], chunk_size: int) -> List[List[Any]]:
 def flatten_list(nested_list: List[List[Any]]) -> List[Any]:
     """Flatten a nested list into a single list."""
     return [item for sublist in nested_list for item in sublist]
+
+
+def extract_valid_entities(parsed_entities: List[Dict], entity_types: List[str] = None) -> List[Dict]:
+    """
+    Extract and validate entities against allowed types.
+    
+    Args:
+        parsed_entities: Raw parsed entities
+        entity_types: Valid entity types. If None, uses default entity types.
+    
+    Returns:
+        List of validated entities
+    """
+    # Ensure all entities are dictionaries
+    if not all(isinstance(entity, dict) for entity in parsed_entities):
+        print(f"[ERROR] Invalid entities detected: {parsed_entities}")
+        parsed_entities = [entity for entity in parsed_entities if isinstance(entity, dict)]
+
+    if entity_types is None:
+        entity_types = ['PERSON', 'ORG', 'GPE', 'LOC', 'MISC', 'NORP', 'FAC', 'PRODUCT', 'EVENT', 'WORK_OF_ART', 'LAW', 'LANGUAGE', 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL']
+    
+    valid_labels = entity_types + ['ORG']  # ORG is alias for ORGANIZATION
+    valid_entities = []
+    
+    for entity in parsed_entities:
+        raw_label = entity.get("label", "").strip()
+        text = entity.get("text", "").strip()
+        
+        # Handle multi-labels (e.g., "PERSON|AGE")
+        labels = [lbl for lbl in raw_label.split("|") if lbl in valid_labels]
+        
+        if not labels:
+            print(f"❌ Invalid label: {raw_label}")
+            continue
+        
+        # Create entity for each valid label
+        for label in labels:
+            valid_entity = {"text": text, "label": label}
+            
+            # Preserve position info if present
+            if "start" in entity:
+                valid_entity["start"] = entity["start"]
+            if "end" in entity:
+                valid_entity["end"] = entity["end"]
+            
+            valid_entities.append(valid_entity)
+    
+    return valid_entities

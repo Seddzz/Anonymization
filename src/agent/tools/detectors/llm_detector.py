@@ -1,139 +1,133 @@
-def extract_valid_entities(parsed_entities):
-    VALID_LABELS = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION", "ORG"]
-    valid_entities = []
-    for entity in parsed_entities:
-        raw_label = entity.get("label", "").strip()
-        text = entity.get("text", "").strip()
-        # Split labels like "PERSON|AGE"
-        labels = [lbl for lbl in raw_label.split("|") if lbl in VALID_LABELS]
-        if not labels:
-            print(f"❌ Invalid label: {raw_label} (valid: {VALID_LABELS})")
-            continue
-        for label in labels:
-            print(f"✅ Valid entity: {text} ({label})")
-            # Preserve start/end if present
-            valid_entity = {"text": text, "label": label}
-            if "start" in entity:
-                valid_entity["start"] = entity["start"]
-            if "end" in entity:
-                valid_entity["end"] = entity["end"]
-            valid_entities.append(valid_entity)
-    if not valid_entities:
-        print("⚠️ No valid entities found in LLM output.")
-    print(f"🎯 Total valid entities: {len(valid_entities)}")
-    return valid_entities
-import subprocess
 import json
 import re
 import ollama
+from typing import List, Dict, Optional
+
 
 class LLMDetector:
-    def __init__(self, model="llama3"):
+    """
+    LLM-based entity detector using local Ollama models.
+    
+    Features:
+    - Natural language understanding for complex contexts
+    - Automatic fake data generation via FakerReplacer
+    - Robust JSON parsing with multiple fallback strategies
+    - Better for Arabic and ambiguous cases
+    """
+    
+    def __init__(self, model: str = "llama3"):
         self.model = model
-        self.client = ollama.Client()  # persistent connection
-
-    def detect(self, text, entity_types=None):
+        self.client = ollama.Client()
+        self.faker_replacer = self._load_faker_replacer()
+    
+    def _load_faker_replacer(self):
+        """Load FakerReplacer for generating fake data."""
+        try:
+            from ..replacers.faker_replacer import FakerReplacer
+            return FakerReplacer()
+        except ImportError:
+            try:
+                from src.agent.tools.replacers.faker_replacer import FakerReplacer
+                return FakerReplacer()
+            except ImportError:
+                print("⚠️ FakerReplacer not available, entities will not have fake replacements")
+                return None
+    
+    def detect(self, text: str, entity_types: Optional[List[str]] = None) -> List[Dict]:
+        """
+        Detect entities in text using LLM.
+        
+        Args:
+            text: Input text to analyze
+            entity_types: List of entity types to detect (None = all)
+        
+        Returns:
+            List of dicts: [{'text': '...', 'label': '...', 'fake': '...'}, ...]
+        """
         if entity_types is None:
             entity_types = ["PERSON", "EMAIL", "ORGANIZATION", "AGE", "PHONE", "LOCATION"]
+        
+        prompt = self._build_prompt(text, entity_types)
+        entities = self._attempt_detection(prompt, entity_types)
+        
+        # Generate fake replacements
+        if entities and self.faker_replacer:
+            self._add_fake_replacements(entities)
+        
+        return entities
+    
+    def _build_prompt(self, text: str, entity_types: List[str]) -> str:
+        """Build the LLM prompt for entity extraction."""
         entity_types_str = ", ".join(entity_types)
-        prompt = (
+        return (
             f"Extract all entities from the following text. "
-            f"Return only a valid JSON array, where each item is an object with exactly two keys: 'text' (the entity value) and 'label' (one of: {entity_types_str}). "
-            f"Do not include any explanations, comments, or extra objects. Do not add any keys other than 'text' and 'label'. "
+            f"Return only a valid JSON array, where each item is an object with exactly two keys: "
+            f"'text' (the entity value) and 'label' (one of: {entity_types_str}). "
+            f"Do not include any explanations, comments, or extra objects. "
             f"If there are no entities, return an empty array []. "
             f"The output must be valid JSON and nothing else.\n"
             f"Text: {text}\nJSON:"
         )
-        # Always use _attempt_detection for LLM calls (subprocess with debug, retries, and robust parsing)
-        return self._attempt_detection(prompt, text, entity_types)
-
-
-        try:
-            # Strategy 1: Multiple attempts with shorter timeout
-            entities = self._attempt_detection(prompt, text, entity_types)
-            
-            # Strategy 2: If empty results, try with fallback
-            if not entities and self.fallback_enabled:
-                print("🔄 LLM returned empty, trying SpaCy fallback...")
-                return self._spacy_fallback(text)
-            
-            return entities
-
-        except subprocess.TimeoutExpired:
-            print("⚠️ Mistral timed out")
-            if self.retry_count < self.max_retries:
-                self.retry_count += 1
-                print(f"🔄 Retrying ({self.retry_count}/{self.max_retries})...")
-                return self.detect(text, entity_types)
-            elif self.fallback_enabled:
-                print("🔄 All retries failed, using SpaCy fallback...")
-                return self._spacy_fallback(text)
-            return []
-        except Exception as e:
-            print(f"❌ Mistral error: {e}")
-            if self.fallback_enabled:
-                print("🔄 Error occurred, using SpaCy fallback...")
-                return self._spacy_fallback(text)
-            return []
-
-    def _attempt_detection(self, prompt, text, entity_types):
-        """Single detection attempt with improved error handling"""
-        # Optimized timeout - balance between speed and reliability
-    # Timeout removed: allow unlimited execution time
-
-        for attempt in range(2):
+    
+    def _attempt_detection(self, prompt: str, entity_types: List[str], max_attempts: int = 2) -> List[Dict]:
+        """
+        Attempt LLM detection with retries and robust error handling.
+        
+        Args:
+            prompt: The prompt to send to LLM
+            entity_types: Valid entity types for filtering
+            max_attempts: Number of retry attempts
+        
+        Returns:
+            List of valid entities
+        """
+        for attempt in range(max_attempts):
             try:
-                print(f"\n===== LLM DEBUG START (Attempt {attempt + 1}/2) =====")
-                print(f"Prompt sent to Ollama (model: {self.model}):\n{prompt}\n---END PROMPT---")
-                print(f"Using Ollama Python API (persistent server mode)")
-                # Use Ollama Python API for persistent, fast calls
-                response = self.client.chat(model=self.model, messages=[{"role": "user", "content": prompt}])
+                print(f"\n===== LLM Detection (Attempt {attempt + 1}/{max_attempts}) =====")
+                print(f"Model: {self.model}")
+                
+                # Call Ollama API
+                response = self.client.chat(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}]
+                )
                 output = response['message']['content'].strip()
-                print(f"Raw LLM output (full):\n{output}\n---END OUTPUT---")
-                print(f"Raw LLM output length: {len(output)}")
+                
+                print(f"Raw output length: {len(output)} chars")
+                
                 if len(output) < 5:
-                    print("⚠️ Output too short, trying again...")
+                    print("⚠️ Output too short, retrying...")
                     continue
+                
+                # Parse JSON response
                 entities = self._parse_json_response(output, entity_types)
+                
                 if entities:
-                    print(f"✅ Successfully parsed {len(entities)} entities - stopping attempts")
-                    print("===== LLM DEBUG END =====\n")
+                    print(f"✅ Successfully parsed {len(entities)} entities")
                     return entities
                 else:
-                    print("⚠️ No entities found in response, trying again...")
-                    print("===== LLM DEBUG END =====\n")
+                    print("⚠️ No valid entities found, retrying...")
+            
             except Exception as e:
-                print(f"⚠️ Ollama API error: {e}, trying again...")
-                continue
+                print(f"⚠️ Ollama API error: {e}")
+                if attempt < max_attempts - 1:
+                    continue
+        
+        print("❌ All detection attempts failed")
         return []
-
-    def _spacy_fallback(self, text):
-        """Fallback to SpaCy when LLM fails completely"""
-        try:
-            # Fixed import path for new agent-intelligent structure
-            from .spacy_detector import SpacyDetector
-            spacy_detector = SpacyDetector()
-            print("✅ Using SpaCy as backup detector")
-            return spacy_detector.detect(text)
-        except ImportError as e:
-            print(f"❌ SpaCy detector import failed: {e}")
-            print("🔄 Attempting alternative import...")
-            try:
-                # Alternative import path
-                from src.agent.tools.detectors.spacy_detector import SpacyDetector
-                spacy_detector = SpacyDetector()
-                print("✅ Using SpaCy as backup detector (alternative path)")
-                return spacy_detector.detect(text)
-            except Exception as e2:
-                print(f"❌ All SpaCy import attempts failed: {e2}")
-                return []
-        except Exception as e:
-            print(f"❌ SpaCy fallback execution failed: {e}")
-            return []
-
-    def _parse_json_response(self, output: str, entity_types):
-        """Parse JSON response from Mistral with aggressive fixing"""
-        # Find JSON array in output
+    
+    def _parse_json_response(self, output: str, entity_types: List[str]) -> List[Dict]:
+        """
+        Parse JSON response with multiple fallback strategies.
+        
+        Args:
+            output: Raw LLM output
+            entity_types: Valid entity types for validation
+        
+        Returns:
+            List of valid entities
+        """
+        # Extract JSON array from output
         json_start = output.find('[')
         json_end = output.rfind(']') + 1
         
@@ -142,104 +136,136 @@ class LLMDetector:
         
         json_str = output[json_start:json_end]
         
-        # Multiple fix attempts
+        # Try progressively aggressive parsing strategies
         for fix_level in range(3):
             try:
                 if fix_level == 0:
-                    # Try as-is first
+                    # Try as-is
                     entities_data = json.loads(json_str)
                 elif fix_level == 1:
-                    # Try with basic fixes
+                    # Basic fixes
                     fixed = self._fix_json_format(json_str)
                     entities_data = json.loads(fixed)
                 else:
-                    # Try with aggressive fixes
+                    # Aggressive fixes
                     fixed = self._aggressive_json_fix(json_str)
                     entities_data = json.loads(fixed)
-                # --- Robust post-processing: filter only valid dicts with 'text' and 'label' ---
+                
+                # Filter and validate
                 if isinstance(entities_data, list):
-                    filtered = [e for e in entities_data if isinstance(e, dict) and 'text' in e and 'label' in e]
-                else:
-                    filtered = []
-                print(f"🔍 Parsed JSON data (filtered): {filtered}")
-                valid_entities = extract_valid_entities(filtered)
-                return valid_entities
+                    filtered = [
+                        e for e in entities_data 
+                        if isinstance(e, dict) and 'text' in e and 'label' in e
+                    ]
+                    return self._extract_valid_entities(filtered, entity_types)
+            
             except (json.JSONDecodeError, ValueError, KeyError):
-                continue  # Try next fix level
-        # --- Fallback: try to extract valid entity objects with regex if all parsing fails ---
-        import re
+                continue
+        
+        # Regex fallback - extract entity objects manually
         pattern = r'\{\s*"text"\s*:\s*"(.*?)"\s*,\s*"label"\s*:\s*"(.*?)"\s*\}'
         matches = re.findall(pattern, json_str)
-        filtered = [{"text": m[0], "label": m[1]} for m in matches]
-        if filtered:
-            print(f"🔍 Regex fallback extracted entities: {filtered}")
-            return extract_valid_entities(filtered)
-        return []  # All parsing attempts failed
-
+        
+        if matches:
+            filtered = [{"text": m[0], "label": m[1]} for m in matches]
+            print(f"📝 Regex fallback extracted {len(filtered)} entities")
+            return self._extract_valid_entities(filtered, entity_types)
+        
+        return []
+    
     def _fix_json_format(self, json_str: str) -> str:
-        """Fix common JSON formatting issues from LLM output"""
-        import re
-        # Remove // comments
+        """Fix common JSON formatting issues."""
+        # Remove comments
         json_str = re.sub(r'//.*', '', json_str)
-        # Fix double-escaped quotes first
-        json_str = json_str.replace('\\"', '"')
-        json_str = json_str.replace("\\'", "'")
-        # Fix escaped quotes (common issue)
-        json_str = json_str.replace('\\"', '"')
-        json_str = json_str.replace("\\'", "'")
+        
+        # Fix escaped quotes
+        json_str = json_str.replace('\\"', '"').replace("\\'", "'")
+        
         # Replace single quotes with double quotes
         json_str = json_str.replace("'", '"')
-        # Basic cleanup of common patterns
-        json_str = json_str.replace('text:', '"text":')
-        json_str = json_str.replace('label:', '"label":')
-        json_str = json_str.replace('start:', '"start":')
-        json_str = json_str.replace('end:', '"end":')
+        
+        # Fix unquoted keys
+        for key in ['text', 'label', 'start', 'end']:
+            json_str = json_str.replace(f'{key}:', f'"{key}":')
+        
         return json_str
     
     def _aggressive_json_fix(self, json_str: str) -> str:
-        """More aggressive JSON fixing for very messy responses"""
-        import re
+        """More aggressive JSON fixing for messy responses."""
         # Remove markdown code blocks
         fixed = re.sub(r'```json\s*', '', json_str)
         fixed = re.sub(r'```\s*', '', fixed)
-        # Remove // comments
+        
+        # Remove comments
         fixed = re.sub(r'//.*', '', fixed)
-        # Remove extra text before/after
+        
+        # Trim to array boundaries
         fixed = re.sub(r'^[^[]*\[', '[', fixed)
         fixed = re.sub(r'\][^\]]*$', ']', fixed)
-        # Fix broken quotes and escaping
-        fixed = re.sub(r'(?<!\\)"([^"]*)"(?=\s*:)', r'"\1"', fixed)  # Fix keys
-        fixed = re.sub(r':\s*"([^"]*)"(?=\s*[,}])', r': "\1"', fixed)  # Fix values
+        
         # Fix trailing commas
         fixed = re.sub(r',\s*}', '}', fixed)
         fixed = re.sub(r',\s*]', ']', fixed)
-        # Fix missing commas
+        
+        # Fix missing commas between objects
         fixed = re.sub(r'}\s*{', '}, {', fixed)
+        
         return fixed
-
-    def _is_valid_entity_format(self, entity, entity_types):
-        """Check if entity has required format (lenient for missing positions)"""
-        if not isinstance(entity, dict):
-            print(f"❌ Not a dict: {type(entity)}")
-            return False
+    
+    def _extract_valid_entities(self, parsed_entities: List[Dict], entity_types: List[str]) -> List[Dict]:
+        """
+        Extract and validate entities against allowed types.
         
-        # Only require text and label (start/end are optional)
-        required_fields = ['text', 'label']
-        missing_fields = [field for field in required_fields if field not in entity]
-        if missing_fields:
-            print(f"❌ Missing fields: {missing_fields}")
-            return False
+        Args:
+            parsed_entities: Raw parsed entities
+            entity_types: Valid entity types
         
-        # Check if label is valid (use provided entity_types)
-        valid_labels = entity_types + ['ORG']  # Add ORG as alias for ORGANIZATION
-        if entity['label'] not in valid_labels:
-            print(f"❌ Invalid label: {entity['label']} (valid: {valid_labels})")
-            return False
+        Returns:
+            List of validated entities
+        """
+        valid_labels = entity_types + ['ORG']  # ORG is alias for ORGANIZATION
+        valid_entities = []
         
-        # Check if text is not empty
-        if not entity['text'] or len(entity['text'].strip()) < 1:
-            print(f"❌ Empty text: {entity['text']}")
-            return False
+        for entity in parsed_entities:
+            raw_label = entity.get("label", "").strip()
+            text = entity.get("text", "").strip()
+            
+            # Handle multi-labels (e.g., "PERSON|AGE")
+            labels = [lbl for lbl in raw_label.split("|") if lbl in valid_labels]
+            
+            if not labels:
+                print(f"❌ Invalid label: {raw_label}")
+                continue
+            
+            # Create entity for each valid label
+            for label in labels:
+                valid_entity = {"text": text, "label": label}
+                
+                # Preserve position info if present
+                if "start" in entity:
+                    valid_entity["start"] = entity["start"]
+                if "end" in entity:
+                    valid_entity["end"] = entity["end"]
+                
+                valid_entities.append(valid_entity)
+                print(f"✅ Valid entity: {text} ({label})")
         
-        print(f"✅ Valid entity: {entity['text']} ({entity['label']})")
-        return True
+        if not valid_entities:
+            print("⚠️ No valid entities found in LLM output")
+        
+        print(f"🎯 Total valid entities: {len(valid_entities)}")
+        return valid_entities
+    
+    def _add_fake_replacements(self, entities: List[Dict]) -> None:
+        """Generate fake replacements for detected entities (in-place)."""
+        for entity in entities:
+            original_text = entity.get('text', '')
+            entity_label = entity.get('label', '')
+            
+            if original_text and entity_label:
+                fake_replacement = self.faker_replacer._get_smart_replacement(
+                    original_text, 
+                    entity_label
+                )
+                entity['fake'] = fake_replacement
+                print(f"🤖 Generated fake for '{original_text}' ({entity_label}): '{fake_replacement}'")

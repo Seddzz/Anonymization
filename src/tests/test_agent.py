@@ -20,18 +20,18 @@ class TestAgent(unittest.TestCase):
     def test_pipeline_initialization(self):
         """Test that the pipeline initializes correctly."""
         self.assertIsNotNone(self.pipeline)
-        self.assertIsNotNone(self.pipeline.spacy_detector)
-        self.assertIsNotNone(self.pipeline.faker_replacer)
+        self.assertIsNotNone(self.pipeline.detector)
+        self.assertIsNotNone(self.pipeline.replacer)
     
     def test_text_anonymization(self):
         """Test basic text anonymization."""
         test_text = "Hello, my name is John Doe and I live in New York."
-        result = self.pipeline.anonymize_text(test_text)
+        result = self.pipeline.anonymize(test_text)
         
         # Check that we get a result
         self.assertIsNotNone(result)
         self.assertIn('anonymized_text', result)
-        self.assertIn('entities_found', result)
+        self.assertIn('replacement_mapping', result)
 
 
 if __name__ == '__main__':
