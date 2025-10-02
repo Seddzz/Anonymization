@@ -1,78 +1,165 @@
-# Documentation
+# SecureDoc - Document Anonymization Tool
 
-## Overview
-This directory contains comprehensive documentation for the Agent-Intelligent Anonymization System.
+SecureDoc is a powerful web application that automatically detects and anonymizes sensitive personal information in documents while preserving original formatting.
 
-## Available Documentation
+## 🚀 Features
 
-### 📖 [API Documentation](api.md)
-Complete API reference for the REST endpoints, including request/response formats, authentication, and examples for integrating with the anonymization system.
+- **Multi-Format Support**: Process TXT, DOCX, and PDF files
+- **Smart Entity Detection**: Automatically identifies personal information using NLP
+- **Format Preservation**: Maintains original document formatting, styles, and layout
+- **Customizable Anonymization**: Select specific entity types to anonymize
+- **Live Preview**: Real-time editing and preview of anonymization results
+- **Arabic Language Support**: Full compatibility with Arabic text and entities
 
-### 🏗️ [Architecture Guide](architecture.md)
-Detailed explanation of the agent-intelligent architecture, including:
-- System components and their interactions
-- Data flow and processing pipeline
-- Memory management and storage
-- Model integration patterns
+## 📋 Supported Entity Types
 
-### ⚙️ [Setup Guide](setup.md)
-Step-by-step installation and configuration instructions:
-- Environment setup
-- Dependency installation
-- Configuration files
-- Running the application
-- Docker deployment
+- **👤 Person Names** (Arabic and English)
+- **📧 Email Addresses**
+- **🏢 Organizations**
+- **📱 Phone Numbers**
+- **🎂 Ages**
+- **📍 Locations** (Addresses, cities, countries)
+- **📅 Dates**
 
-### 👤 [User Guide](user_guide.md)
-End-user documentation for using the system:
-- Web interface walkthrough
-- File upload and processing
-- Understanding results
-- Troubleshooting common issues
+## 🛠️ Installation
 
-## Quick Links
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
 
-### For Developers
-- [Architecture Guide](architecture.md) - Understand the system design
-- [API Documentation](api.md) - Integrate with the REST API
-- [Setup Guide](setup.md) - Get development environment running
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Seddzz/Anonymization.git
+cd anonymization
+```
 
-### For Users
-- [User Guide](user_guide.md) - Learn how to use the web interface
-- [Setup Guide](setup.md) - Install and run the application
+### Step 2: Create Virtual Environment
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-### For DevOps
-- [Setup Guide](setup.md) - Deployment and configuration
-- [Architecture Guide](architecture.md) - System requirements and scaling
+### Step 3: Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-## Contributing to Documentation
+### Required Dependencies
+```txt
+# Core Web Framework
+Flask==3.1.0
 
-When updating documentation:
+# Text Processing & NLP
+spacy==3.8.7
 
-1. **Keep it current** - Update docs when changing functionality
-2. **Be clear and concise** - Use simple language and examples
-3. **Include examples** - Show real usage scenarios
-4. **Test instructions** - Verify setup steps work on clean systems
-5. **Use proper markdown** - Follow consistent formatting
+# Document Processing
+python-docx==1.2.0
 
-## Documentation Standards
+# PDF Processing
+PyPDF2==3.0.1
+pdfplumber==0.11.7
+reportlab==4.2.5
+PyMuPDF==1.24.10
 
-- Use clear headings and sections
-- Include code examples with syntax highlighting
-- Add screenshots for UI components when helpful
-- Keep external links up to date
-- Use consistent terminology throughout
+# Fake Data Generation
+Faker==37.6.0
 
-## Getting Help
+# HTTP Client
+httpx==0.28.1
 
-If you find issues with the documentation or need clarification:
+# Environment Variables
+python-dotenv==1.1.1
+```
 
-1. Check existing documentation first
-2. Look at code examples in the repository
-3. Create an issue with specific questions
-4. Suggest improvements via pull requests
+### Step 4: Download SpaCy Model
+```bash
+python -m spacy download en_core_web_sm
+```
 
----
+## 🎯 Quick Start
 
-**Last Updated:** September 2025  
-**Version:** 1.0.0
+### Running the Application
+```bash
+cd src/interfaces
+python web_ui.py
+```
+
+The application will be available at: `http://localhost:5000`
+
+### Basic Usage
+
+1. **Upload a Document**: Choose from TXT, DOCX, or PDF formats
+2. **Select Detection Method**:
+   - **SpaCy NLP**: Fast processing for English and French
+   - **LLM**: Advanced AI detection for complex patterns
+3. **Choose Entity Types**: Select which personal information to anonymize
+4. **Process & Download**: Get your anonymized document with preserved formatting
+
+### Advanced Features
+
+- **Entity Selection Mode**: Customize which entity types to detect
+- **Live Edit**: Adjust entity selection and reprocess without re-uploading
+- **Side-by-Side Comparison**: View original vs. anonymized content
+- **Detailed Mapping**: See exactly what was changed and how
+
+## 📁 Project Structure
+
+```
+anonymization/
+├── src/
+│   ├── agent/
+│   │   ├── tools/
+│   │   │   ├── detectors/     # Entity detection modules
+│   │   │   └── replacers/     # Data anonymization modules
+│   │   └── executor.py        # Main processing pipeline
+│   ├── interfaces/
+│   │   ├── web_ui.py         # Flask web application
+│   │   ├── templates/        # HTML templates
+│   │   └── static/           # CSS, JS, assets
+│   └── utils/
+│       ├── document_processor.py  # Document handling
+│       ├── file_processor.py     # File format processing
+│       └── helpers.py            # Utility functions
+└── requirements.txt
+```
+
+## 🔧 Configuration
+
+Create a `.env` file in the project root:
+
+```env
+SECRET_KEY=your-secret-key-here
+LLM_API_KEY=your-llm-api-key-optional
+```
+
+## 🌐 Web Interface
+
+The application provides a user-friendly web interface with:
+
+- **Responsive Design**: Works on desktop and mobile devices
+- **Real-time Processing**: Background task processing with progress updates
+- **File Management**: Secure temporary file handling
+- **Download Options**: Multiple format support for output
+
+## 🎨 Processing Capabilities
+
+### Document Types
+- **TXT Files**: Simple text processing with structure preservation
+- **DOCX Files**: Full formatting preservation (styles, tables, images)
+- **PDF Files**: Advanced layout preservation with PyMuPDF
+
+### Language Support
+- **English**: Full entity detection and anonymization
+- **Arabic**: Complete support for Arabic text and names
+- **Multi-language**: Mixed language document handling
+
+## 🔒 Privacy & Security
+
+- **Local Processing**: All processing happens on your local machine
+- **Temporary Files**: Uploaded files are automatically cleaned up
+- **No Data Storage**: No personal data is stored or transmitted
+- **Open Source**: Full transparency with source code available
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
