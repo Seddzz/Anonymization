@@ -10,7 +10,7 @@
         <p class="text-gray-600 text-xl">Select which types of personal information you want to detect and anonymize</p>
     </div>
 
-    <form action="{{ url_for('custom_anonymize') }}" method="post" enctype="multipart/form-data" class="space-y-8">
+    <form action="{{ url_for('custom_anonymize') }}" method="post" enctype="multipart/form-data" class="space-y-8" id="customAnonymizeForm">
         
         <!-- Entity Type Selection -->
         <div class="bg-gray-50 rounded-lg p-6">
@@ -169,6 +169,25 @@
                             <p class="mt-1 text-sm text-gray-500">TXT, PDF, or DOCX up to 10MB</p>
                         </div>
                     </div>
+                    <!-- File info display -->
+                    <div id="fileInfo" class="hidden mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <div>
+                                    <p id="fileName" class="text-sm font-medium text-green-800"></p>
+                                    <p id="fileSize" class="text-xs text-green-600"></p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="clearFile()" class="text-red-500 hover:text-red-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -190,57 +209,191 @@
 
 <script>
 // Custom entity selection page logic
+let currentInputType = 'text';
+
 function selectAll() {
     document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
         checkbox.checked = true;
     });
 }
+
 function selectNone() {
     document.querySelectorAll('input[name="entity_types"]').forEach(checkbox => {
         checkbox.checked = false;
     });
 }
+
 function showTextInput() {
-    document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
-    document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('textTab').className = 'py-3 px-6 border-b-2 border-blue-500 text-blue-600 font-medium text-lg';
+    document.getElementById('fileTab').className = 'py-3 px-6 border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-lg';
     document.getElementById('textInputSection').classList.remove('hidden');
     document.getElementById('fileInputSection').classList.add('hidden');
     document.getElementById('submitBtn').textContent = '🚀 Anonymize Text with Custom Settings';
     document.getElementById('file-upload').value = '';
     document.getElementById('file-upload').removeAttribute('required');
     document.getElementById('custom_text').setAttribute('required', 'required');
+    document.getElementById('fileInfo').classList.add('hidden');
+    currentInputType = 'text';
 }
+
 function showFileInput() {
-    document.getElementById('fileTab').className = 'py-2 px-4 border-b-2 border-blue-500 text-blue-600 font-medium';
-    document.getElementById('textTab').className = 'py-2 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+    document.getElementById('fileTab').className = 'py-3 px-6 border-b-2 border-blue-500 text-blue-600 font-medium text-lg';
+    document.getElementById('textTab').className = 'py-3 px-6 border-b-2 border-transparent text-gray-500 hover:text-gray-700 text-lg';
     document.getElementById('fileInputSection').classList.remove('hidden');
     document.getElementById('textInputSection').classList.add('hidden');
     document.getElementById('submitBtn').textContent = '🚀 Anonymize File with Custom Settings';
     document.getElementById('custom_text').value = '';
     document.getElementById('custom_text').removeAttribute('required');
     document.getElementById('file-upload').setAttribute('required', 'required');
+    currentInputType = 'file';
 }
+
+function clearFile() {
+    document.getElementById('file-upload').value = '';
+    document.getElementById('fileInfo').classList.add('hidden');
+    document.getElementById('dropzoneContent').classList.remove('hidden');
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function validateForm() {
+    // Check if at least one entity type is selected
+    const entityTypes = document.querySelectorAll('input[name="entity_types"]:checked');
+    if (entityTypes.length === 0) {
+        alert('Please select at least one entity type to detect.');
+        return false;
+    }
+
+    // Validate input based on current type
+    if (currentInputType === 'text') {
+        const textInput = document.getElementById('custom_text');
+        if (!textInput.value.trim()) {
+            alert('Please enter some text to anonymize.');
+            textInput.focus();
+            return false;
+        }
+    } else {
+        const fileInput = document.getElementById('file-upload');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please select a file to upload.');
+            return false;
+        }
+
+        const file = fileInput.files[0];
+        const allowedTypes = ['.txt', '.pdf', '.docx'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            alert('Please upload a TXT, PDF, or DOCX file.');
+            return false;
+        }
+
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB.');
+            return false;
+        }
+    }
+
+    return true;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     showTextInput();
-    // Attach progress bar logic to custom form submit
-    const form = document.querySelector('form[action*="custom_anonymize"]');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = document.getElementById('submitBtn');
-            // Get detection method (spacy or llm)
-            let detectionMethod = 'spacy';
-            const spacyRadio = document.getElementById('spacy_method');
-            const llmRadio = document.getElementById('llm_method');
-            if (spacyRadio && spacyRadio.checked) detectionMethod = 'spacy';
-            if (llmRadio && llmRadio.checked) detectionMethod = 'llm';
-            if (submitBtn && typeof transformButtonToProgressBar === 'function') {
-                transformButtonToProgressBar(submitBtn, detectionMethod, 'custom');
-            } else if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Processing...';
-            }
-        });
+
+    // File upload handling
+    const fileInput = document.getElementById('file-upload');
+    const dropzone = document.getElementById('dropzone');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const dropzoneContent = document.getElementById('dropzoneContent');
+
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.remove('hidden');
+            dropzoneContent.classList.add('hidden');
+        }
+    });
+
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropzone.classList.add('border-blue-400', 'bg-blue-50');
+    }
+
+    function unhighlight() {
+        dropzone.classList.remove('border-blue-400', 'bg-blue-50');
+    }
+
+    dropzone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        if (files && files[0]) {
+            const file = files[0];
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.remove('hidden');
+            dropzoneContent.classList.add('hidden');
+        }
+    }
+
+    // Form submission handling
+    const form = document.getElementById('customAnonymizeForm');
+    form.addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        
+        // Get detection method
+        let detectionMethod = 'spacy';
+        const spacyRadio = document.getElementById('spacy_method');
+        const llmRadio = document.getElementById('llm_method');
+        if (spacyRadio && spacyRadio.checked) detectionMethod = 'spacy';
+        if (llmRadio && llmRadio.checked) detectionMethod = 'llm';
+
+        // Show loading state
+        if (submitBtn && typeof transformButtonToProgressBar === 'function') {
+            transformButtonToProgressBar(submitBtn, detectionMethod, 'custom');
+        } else if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    });
 });
 </script>
 {% endblock %}

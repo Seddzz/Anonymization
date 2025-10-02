@@ -68,6 +68,7 @@ def fast_anonymize_docx(doc, valid_entities):
 
     print(f"[DEBUG] fast_anonymize_docx completed: {paragraphs_processed} paragraphs, {tables_processed} table cells, {total_replacements} total replacements")
     return doc
+
 """
 Document Processor - Handles anonymization while preserving document structure
 """
@@ -194,6 +195,7 @@ class DocumentProcessor:
                 'success': False,
                 'error': f'Error processing DOCX: {str(e)}'
             }
+
     def __init__(self, pipeline):
         """
         Initialize with an anonymization pipeline
@@ -346,6 +348,7 @@ class DocumentProcessor:
             except UnicodeEncodeError:
                 print("[WARNING] Could not write error to log due to encoding issues")
             return None
+
     def process_file(self, file_path, file_type=None):
         """
         Process any supported file type
@@ -393,8 +396,29 @@ class DocumentProcessor:
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
             
+            print(f"[DEBUG] TXT with entities - Selected entity types: {entity_types}")
+            
             # Anonymize with custom entity types
             result = self.pipeline.anonymize(content, entity_types)
+            
+            # Filter entities to only include selected types
+            replacement_mapping = result.get('replacement_mapping', {})
+            entity_info = result.get('entity_info', {})
+            
+            print(f"[DEBUG] TXT - Original replacement mapping count: {len(replacement_mapping)}")
+            
+            filtered_replacement_mapping = {}
+            filtered_entity_info = {}
+            
+            for original_text, replacement_text in replacement_mapping.items():
+                entity_type = entity_info.get(original_text, 'PERSON')
+                if entity_type in entity_types:
+                    filtered_replacement_mapping[original_text] = replacement_text
+                    filtered_entity_info[original_text] = entity_type
+                else:
+                    print(f"[DEBUG] TXT - Filtered out: {original_text} (type: {entity_type})")
+            
+            print(f"[DEBUG] TXT - Filtered replacement mapping count: {len(filtered_replacement_mapping)}")
             
             # Generate output path if not provided
             if output_path is None:
@@ -409,12 +433,16 @@ class DocumentProcessor:
                 'success': True,
                 'original_text': content,
                 'anonymized_text': result['anonymized_text'],
-                'replacement_mapping': result['replacement_mapping'],
-                'entity_info': result.get('entity_info', {}),
-                'output_path': output_path
+                'replacement_mapping': filtered_replacement_mapping,  # Use filtered mapping
+                'entity_info': filtered_entity_info,  # Use filtered entity info
+                'output_path': output_path,
+                'file_type': 'txt'
             }
             
         except Exception as e:
+            print(f"[ERROR] TXT with entities processing failed: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': f'Error processing TXT file: {str(e)}'
@@ -428,8 +456,12 @@ class DocumentProcessor:
             from utils.helpers import extract_valid_entities
             doc = Document(file_path)
             full_text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            
+            print(f"[DEBUG] DOCX with entities - Selected entity types: {entity_types}")
+            
             # Anonymize with custom entity types using the pipeline
             replacement_result = self.pipeline.anonymize(full_text, entity_types)
+            
             # If replacement_result is a tuple, unpack (legacy)
             if isinstance(replacement_result, tuple):
                 replacement_result = replacement_result[0]
@@ -438,38 +470,73 @@ class DocumentProcessor:
                     'success': False,
                     'error': f'Pipeline anonymize returned unexpected type: {type(replacement_result)}'
                 }
-            # Use valid_entities for anonymization
-            valid_entities = extract_valid_entities([
-                {"text": k, "label": v} for k, v in replacement_result['entity_info'].items()
-            ])
-            doc = fast_anonymize_docx(doc, valid_entities)
+            
+            # Get the replacement mapping and entity info from pipeline result
+            replacement_mapping = replacement_result.get('replacement_mapping', {})
+            entity_info = replacement_result.get('entity_info', {})
+            
+            print(f"[DEBUG] DOCX - Original replacement mapping count: {len(replacement_mapping)}")
+            print(f"[DEBUG] DOCX - Entity info: {entity_info}")
+            
+            # Filter entities to only include selected types
+            filtered_replacement_mapping = {}
+            filtered_entity_info = {}
+            
+            for original_text, replacement_text in replacement_mapping.items():
+                entity_type = entity_info.get(original_text, 'PERSON')
+                if entity_type in entity_types:
+                    filtered_replacement_mapping[original_text] = replacement_text
+                    filtered_entity_info[original_text] = entity_type
+                else:
+                    print(f"[DEBUG] DOCX - Filtered out: {original_text} (type: {entity_type})")
+            
+            print(f"[DEBUG] DOCX - Filtered replacement mapping count: {len(filtered_replacement_mapping)}")
+            
+            # Convert filtered replacement mapping to valid_entities for fast_anonymize_docx
+            valid_entities = []
+            for original_text, replacement_text in filtered_replacement_mapping.items():
+                entity_type = filtered_entity_info.get(original_text, 'PERSON')
+                valid_entities.append({
+                    'text': original_text,
+                    'label': entity_type,
+                    'replacement': replacement_text  # Use the pre-generated replacement
+                })
+            
+            print(f"[DEBUG] DOCX - Valid entities for processing: {len(valid_entities)}")
+            
+            # Apply anonymization only if there are entities to process
+            if valid_entities:
+                doc = fast_anonymize_docx(doc, valid_entities)
+            else:
+                print("[DEBUG] DOCX - No entities to anonymize after filtering")
+            
             if output_path is None:
                 base_name = os.path.splitext(file_path)[0]
                 output_path = f"{base_name}_anonymized.docx"
+            
             doc.save(output_path)
-            # Use FakerReplacer for replacements
-            from agent.tools.replacers.faker_replacer import FakerReplacer
-            faker_replacer = self.pipeline.replacer if hasattr(self.pipeline, 'replacer') else FakerReplacer()
-            replacement_mapping = {}
-            for e in valid_entities:
-                replacement_mapping[e['text']] = faker_replacer._get_smart_replacement(e['text'], e['label'])
-        
+            
             # Log replacement mapping to a file for debugging
             try:
                 with open('debug_logs.txt', 'a', encoding='utf-8') as log_file:
-                    log_file.write(f"[DEBUG] Replacement mapping: {replacement_mapping}\n")
+                    log_file.write(f"[DEBUG] DOCX Custom Replacement mapping: {filtered_replacement_mapping}\n")
+                    log_file.write(f"[DEBUG] DOCX Selected entity types: {entity_types}\n")
             except UnicodeEncodeError:
                 print("[WARNING] Could not write replacement mapping to log due to encoding issues")
-        
+            
             return {
                 'success': True,
                 'original_text': full_text,
                 'anonymized_text': None,
-                'replacement_mapping': replacement_mapping,
-                'entity_info': replacement_result.get('entity_info', {}),
-                'output_path': output_path
+                'replacement_mapping': filtered_replacement_mapping,  # Use filtered mapping
+                'entity_info': filtered_entity_info,  # Use filtered entity info
+                'output_path': output_path,
+                'file_type': 'docx'
             }
         except Exception as e:
+            print(f"[ERROR] DOCX with entities processing failed: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': f'Error processing DOCX file: {str(e)}'
@@ -486,8 +553,29 @@ class DocumentProcessor:
                 for page in pdf.pages:
                     text_content += page.extract_text() + "\n"
             
+            print(f"[DEBUG] PDF with entities - Selected entity types: {entity_types}")
+            
             # Anonymize with custom entity types
             result = self.pipeline.anonymize(text_content, entity_types)
+            
+            # Filter entities to only include selected types
+            replacement_mapping = result.get('replacement_mapping', {})
+            entity_info = result.get('entity_info', {})
+            
+            print(f"[DEBUG] PDF - Original replacement mapping count: {len(replacement_mapping)}")
+            
+            filtered_replacement_mapping = {}
+            filtered_entity_info = {}
+            
+            for original_text, replacement_text in replacement_mapping.items():
+                entity_type = entity_info.get(original_text, 'PERSON')
+                if entity_type in entity_types:
+                    filtered_replacement_mapping[original_text] = replacement_text
+                    filtered_entity_info[original_text] = entity_type
+                else:
+                    print(f"[DEBUG] PDF - Filtered out: {original_text} (type: {entity_type})")
+            
+            print(f"[DEBUG] PDF - Filtered replacement mapping count: {len(filtered_replacement_mapping)}")
             
             # Generate output path if not provided
             if output_path is None:
@@ -501,12 +589,16 @@ class DocumentProcessor:
                 'success': True,
                 'original_text': text_content,
                 'anonymized_text': result['anonymized_text'],
-                'replacement_mapping': result['replacement_mapping'],
-                'entity_info': result.get('entity_info', {}),
-                'output_path': output_path
+                'replacement_mapping': filtered_replacement_mapping,  # Use filtered mapping
+                'entity_info': filtered_entity_info,  # Use filtered entity info
+                'output_path': output_path,
+                'file_type': 'pdf'
             }
             
         except Exception as e:
+            print(f"[ERROR] PDF with entities processing failed: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': f'Error processing PDF file: {str(e)}'

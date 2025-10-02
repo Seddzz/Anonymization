@@ -305,6 +305,36 @@ def _select_pipeline(detector_type: str, detected_language: str) -> Tuple[Anonym
         return AnonymizerPipeline(detector='spacy'), 'spacy'
 
 
+def infer_entity_type(text: str, entity_types: list) -> str:
+    """Infer entity type based on text content and available entity types."""
+    import re
+    
+    # Email pattern
+    if re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', text) and 'EMAIL' in entity_types:
+        return 'EMAIL'
+    
+    # Phone pattern
+    if re.match(r'^[\+]?[1-9]?[0-9]{7,15}$', re.sub(r'[\s\-\(\)]', '', text)) and 'PHONE' in entity_types:
+        return 'PHONE'
+    
+    # Age pattern
+    if re.match(r'^\d{1,3}\s*(years?|yrs?|y\.o\.|years old)$', text.lower()) and 'AGE' in entity_types:
+        return 'AGE'
+    
+    # Organization indicators
+    org_indicators = ['corp', 'inc', 'ltd', 'llc', 'company', 'corporation', 'university', 'college']
+    if any(indicator in text.lower() for indicator in org_indicators) and 'ORGANIZATION' in entity_types:
+        return 'ORGANIZATION'
+    
+    # Default to PERSON if available, otherwise first available type
+    if 'PERSON' in entity_types:
+        return 'PERSON'
+    elif entity_types:
+        return entity_types[0]
+    else:
+        return 'ENTITY'
+
+
 def _build_result(success: bool, result: Dict, processing_time: float, 
                   actual_detector_used: str, workflow_type: str, 
                   filename: str = None) -> Dict:
@@ -449,23 +479,25 @@ def run_anonymization_task(task_id: str, input_data, detector_type: str, data_ty
             print(f"[DEBUG] process_file returned: {result}")
             processing_time = (datetime.now() - processing_start).total_seconds()
 
-            # Extract entity info from replacer for DOCX files
-            entity_info = {}
-            if hasattr(doc_processor.pipeline.replacer, 'get_replacements_with_types'):
+            # Extract entity info - PRIORITIZE the result's entity_info over the replacer
+            entity_info = result.get('entity_info', {})
+            print(f"[DEBUG] Entity info from result: {entity_info}")
+            # Only use replacer if result doesn't have entity_info
+            if not entity_info and hasattr(doc_processor.pipeline.replacer, 'get_replacements_with_types'):
                 replacement_details = doc_processor.pipeline.replacer.get_replacements_with_types()
                 for original, replacement, entity_type in replacement_details:
                     entity_info[original] = entity_type
-                print(f"[DEBUG] Entity info from replacer: {entity_info}")
+                print(f"[DEBUG] Entity info from replacer (fallback): {entity_info}")
 
-            # For DOCX files, also check the result's replacement_mapping
-            if 'replacement_mapping' in result and result['replacement_mapping']:
+            # If still no entity_info, infer from replacement mapping
+            if not entity_info and 'replacement_mapping' in result:
+                # Make sure the infer_entity_type function exists
                 for original in result['replacement_mapping'].keys():
-                    if original not in entity_info:
-                        entity_info[original] = 'ENTITY'  # Default label
-                print(f"[DEBUG] Entity info after merging: {entity_info}")
+                    entity_info[original] = infer_entity_type(original, ['PERSON', 'EMAIL', 'PHONE', 'LOCATION', 'ORGANIZATION', 'AGE'])
+                print(f"[DEBUG] Entity info using inference: {entity_info}")
 
+            print(f"[DEBUG] Final entity info: {entity_info}")
             result['entity_info'] = entity_info
-
             result_dict = _build_result(
                 result.get('success', False),
                 result,
@@ -505,6 +537,10 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
         background_tasks[task_id]['progress'] = 10
         processing_start = datetime.now()
         
+        # Debug entity types
+        print(f"[DEBUG] Custom anonymization - Entity types selected: {entity_types}")
+        print(f"[DEBUG] Data type: {data_type}, Detection method: {detection_method}")
+        
         # Detect language
         if data_type == 'text':
             detected_language = _detect_language_from_text(input_data)
@@ -527,6 +563,7 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
         
         # Process based on data type
         if data_type == 'text':
+            print(f"[DEBUG] Processing text with entity types: {entity_types}")
             result = pipeline.anonymize(input_data, entity_types)
             processing_time = (datetime.now() - processing_start).total_seconds()
             
@@ -538,7 +575,7 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
             if result.get('success', False):
                 result_dict = {
                     'success': True,
-                    'original_text': result.get('original_text', input_data),  # Use result's original_text or fallback to input
+                    'original_text': result.get('original_text', input_data),
                     'anonymized_text': result['anonymized_text'],
                     'replacement_mapping': result['replacement_mapping'],
                     'entity_info': result.get('entity_info', {}),
@@ -562,6 +599,8 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
             file_path, filename = input_data
             file_extension = filename.split('.')[-1].lower()
             
+            print(f"[DEBUG] Processing file: {filename} with entity types: {entity_types}")
+            
             # Auto-switch to LLM for Arabic files
             if detected_language == 'ar' and actual_detector_used != 'llm':
                 pipeline = AnonymizerPipeline(detector=persistent_llm_detector)
@@ -571,29 +610,62 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
             doc_processor = DocumentProcessor(pipeline)
             background_tasks[task_id]['progress'] = 50
             
+            # Use process_file_with_entities and pass the entity_types
+            print(f"[DEBUG] Calling process_file_with_entities with entity_types: {entity_types}")
             result = doc_processor.process_file_with_entities(file_path, file_extension, entity_types)
             processing_time = (datetime.now() - processing_start).total_seconds()
             
+            print(f"[DEBUG] File processing result: {result.get('success')}, entities: {len(result.get('replacement_mapping', {}))}")
+            
             if result.get('success', False):
-                # Extract entity info
-                entity_info = {}
-                if hasattr(doc_processor.pipeline.replacer, 'get_replacements_with_types'):
+                # Extract entity info - FIXED: Get proper entity types from result
+                entity_info = result.get('entity_info', {})
+                print(f"[DEBUG] Entity info from result: {entity_info}")
+                
+                # If entity_info is empty but we have replacement_mapping, try to get types from pipeline
+                if not entity_info and hasattr(doc_processor.pipeline.replacer, 'get_replacements_with_types'):
                     replacement_details = doc_processor.pipeline.replacer.get_replacements_with_types()
                     for original, replacement, entity_type in replacement_details:
-                        entity_info[original] = entity_type
+                        # Only include entities that match the selected types
+                        if entity_type in entity_types:
+                            entity_info[original] = entity_type
+                        else:
+                            print(f"[DEBUG] Filtered out entity type: {entity_type} (not in selected types)")
                 
                 replacement_mapping = result.get('replacement_mapping', {})
+                
+                # Filter replacement mapping to only include selected entity types
+                filtered_replacement_mapping = {}
+                filtered_entity_info = {}
+                
+                for original, replacement in replacement_mapping.items():
+                    entity_type = entity_info.get(original)
+                    # If entity_type is not found, try to infer it or use default
+                    if not entity_type:
+                        # Try to infer entity type based on content or use default
+                        entity_type = infer_entity_type(original, entity_types)
+                        print(f"[DEBUG] Inferred entity type for '{original}': {entity_type}")
+                    
+                    if entity_type in entity_types:
+                        filtered_replacement_mapping[original] = replacement
+                        filtered_entity_info[original] = entity_type
+                    else:
+                        print(f"[DEBUG] Filtered out replacement: {original} -> {replacement} (type: {entity_type})")
+                
+                print(f"[DEBUG] Original replacement mapping count: {len(replacement_mapping)}")
+                print(f"[DEBUG] Filtered replacement mapping count: {len(filtered_replacement_mapping)}")
+                print(f"[DEBUG] Final entity info: {filtered_entity_info}")
                 
                 result_dict = {
                     'success': True,
                     'original_text': result['original_text'],
                     'anonymized_text': result['anonymized_text'],
-                    'replacement_mapping': replacement_mapping,
-                    'entity_info': entity_info,
+                    'replacement_mapping': filtered_replacement_mapping,
+                    'entity_info': filtered_entity_info,
                     'statistics': {
-                        'entities_found': len(replacement_mapping),
-                        'entities_anonymized': len(replacement_mapping),
-                        'entity_types_found': len(set(entity_info.values())),
+                        'entities_found': len(filtered_replacement_mapping),
+                        'entities_anonymized': len(filtered_replacement_mapping),
+                        'entity_types_found': len(set(filtered_entity_info.values())),
                         'selected_entity_types': entity_types,
                         'detection_method': actual_detector_used,
                         'processing_time': round(processing_time, 1)
@@ -602,7 +674,8 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
                     'source_file': filename,
                     'output_file': os.path.basename(result['output_path']),
                     'has_file_download': True,
-                    'output_path': result['output_path']
+                    'output_path': result['output_path'],
+                    'file_type': result.get('file_type', file_extension)
                 }
             else:
                 result_dict = {
@@ -619,6 +692,8 @@ def run_custom_anonymization_task(task_id: str, input_data, entity_types: list,
     
     except Exception as e:
         app.logger.error(f"Background custom task error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         background_tasks[task_id].update({
             'status': 'error',
             'progress': 0,
