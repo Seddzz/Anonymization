@@ -1,0 +1,1 @@
+"""Anonymizer: API-first anonymization for French documents."""
