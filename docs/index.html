@@ -1,833 +1,849 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnonShield API Documentation | Local AI Privacy Shield</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f7fee7',
-                            100: '#ecfccb',
-                            400: '#a3e635',
-                            500: '#84cc16',
-                            600: '#65a30d',
-                        },
-                        dark: {
-                            bg: '#090d16',
-                            card: '#0f172a',
-                            border: '#1e293b',
-                            hover: '#1e293b',
-                            sidebar: '#0d111c'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-                    }
-                }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnonShield — Documentation</title>
+<meta name="description" content="Local, reversible PII anonymization for English documents. API reference, CLI, agent SDK and playground.">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: {
+        extend: {
+            colors: {
+                bg: 'rgb(var(--bg) / <alpha-value>)',
+                soft: 'rgb(var(--soft) / <alpha-value>)',
+                surface: 'rgb(var(--surface) / <alpha-value>)',
+                surface2: 'rgb(var(--surface2) / <alpha-value>)',
+                line: 'rgb(var(--line) / <alpha-value>)',
+                linesoft: 'rgb(var(--linesoft) / <alpha-value>)',
+                ink: 'rgb(var(--ink) / <alpha-value>)',
+                inksoft: 'rgb(var(--inksoft) / <alpha-value>)',
+                inkdim: 'rgb(var(--inkdim) / <alpha-value>)',
+                accent: 'rgb(var(--accent) / <alpha-value>)',
+                accentink: 'rgb(var(--accentink) / <alpha-value>)'
+            },
+            fontFamily: {
+                sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+                mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
             }
         }
-    </script>
-    <!-- Inter Font & Lucide Icons -->
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        /* Custom Scrollbars & Utilities */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    }
+}
+</script>
+<link rel="preconnect" href="https://rsms.me/">
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
 
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(30, 41, 59, 0.8);
-        }
-
-        .code-syntax-keyword { color: #f472b6; }
-        .code-syntax-string { color: #a3e635; }
-        .code-syntax-function { color: #60a5fa; }
-        .code-syntax-comment { color: #64748b; font-style: italic; }
-        .code-syntax-number { color: #fbbf24; }
-
-        .active-nav {
-            background: rgba(163, 230, 53, 0.12);
-            color: #a3e635;
-            border-left: 3px solid #a3e635;
-        }
-
-        .tab-active {
-            border-bottom: 2px solid #a3e635;
-            color: #a3e635;
-        }
-    </style>
-</head>
-<body class="bg-[#090d16] text-slate-200 font-sans antialiased min-h-screen selection:bg-brand-500 selection:text-black">
-
-    <!-- TOP HEADER / NAVBAR -->
-    <header class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-            
-            <!-- Logo & Title -->
-            <div class="flex items-center gap-3">
-                <a href="#quickstart" class="flex items-center gap-2.5 group">
-                    <div class="w-9 h-9 rounded-xl bg-brand-400/10 border border-brand-400/30 flex items-center justify-center text-brand-400 group-hover:scale-105 transition-transform">
-                        <i data-lucide="shield-check" class="w-5 h-5"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-                            AnonShield
-                            <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-brand-400/10 text-brand-400 border border-brand-400/20 font-mono">v0.1.0</span>
-                        </span>
-                        <span class="text-[11px] text-slate-400 font-medium">Local AI Privacy API</span>
-                    </div>
-                </a>
-            </div>
-
-            <!-- Search Bar Trigger -->
-            <div class="flex-1 max-w-md hidden md:block">
-                <button id="search-trigger-btn" class="w-full h-9 px-3 rounded-lg bg-slate-900/90 border border-slate-800 text-slate-400 text-sm flex items-center justify-between hover:border-slate-700 transition-colors">
-                    <span class="flex items-center gap-2">
-                        <i data-lucide="search" class="w-4 h-4 text-slate-500"></i>
-                        <span>Search docs, endpoints, guides...</span>
-                    </span>
-                    <kbd class="font-mono text-[10px] bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 text-slate-400">Ctrl K</kbd>
-                </button>
-            </div>
-
-            <!-- Right Header Actions -->
-            <div class="flex items-center gap-2 sm:gap-3">
-                <a href="#playground" onclick="switchSection('playground')" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700/80 border border-slate-700/60 transition-all">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
-                    <span>Live Playground</span>
-                </a>
-                <a href="https://github.com/Seddzz/Anonymization" target="_blank" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="GitHub Repository">
-                    <i data-lucide="github" class="w-5 h-5"></i>
-                </a>
-                <button id="theme-toggle" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors" title="Toggle Theme">
-                    <i data-lucide="moon" class="w-5 h-5"></i>
-                </button>
-                <a href="#quickstart" onclick="switchSection('quickstart')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-brand-400 text-slate-950 hover:bg-brand-500 transition-all shadow-sm shadow-brand-400/20">
-                    Quickstart
-                </a>
-            </div>
-        </div>
-
-        <!-- SECONDARY NAV TABS -->
-        <div class="border-t border-slate-800/60 bg-slate-950/40 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-7xl mx-auto flex items-center space-x-6 overflow-x-auto text-sm font-medium">
-                <button onclick="switchTab('docs')" id="tab-docs" class="tab-active py-2.5 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap">
-                    <i data-lucide="book-open" class="w-4 h-4"></i>
-                    Docs
-                </button>
-                <button onclick="switchTab('api')" id="tab-api" class="text-slate-400 hover:text-slate-200 py-2.5 flex items-center gap-2 border-b-2 border-transparent transition-colors whitespace-nowrap">
-                    <i data-lucide="code-2" class="w-4 h-4"></i>
-                    API Reference
-                </button>
-                <button onclick="switchTab('cli')" id="tab-cli" class="text-slate-400 hover:text-slate-200 py-2.5 flex items-center gap-2 border-b-2 border-transparent transition-colors whitespace-nowrap">
-                    <i data-lucide="terminal" class="w-4 h-4"></i>
-                    CLI Tool
-                </button>
-                <button onclick="switchTab('mcp')" id="tab-mcp" class="text-slate-400 hover:text-slate-200 py-2.5 flex items-center gap-2 border-b-2 border-transparent transition-colors whitespace-nowrap">
-                    <i data-lucide="bot" class="w-4 h-4"></i>
-                    MCP Agent SDK
-                </button>
-                <button onclick="switchTab('playground')" id="tab-playground" class="text-slate-400 hover:text-slate-200 py-2.5 flex items-center gap-2 border-b-2 border-transparent transition-colors whitespace-nowrap">
-                    <i data-lucide="play" class="w-4 h-4"></i>
-                    Interactive Playground
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- MAIN WRAPPER WITH 3-COLUMN LAYOUT -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-8">
-
-        <!-- LEFT SIDEBAR NAVIGATION -->
-        <aside class="w-60 shrink-0 hidden lg:block sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto pr-2 text-sm font-medium">
-            <div class="space-y-6">
-                
-                <!-- Group 1: Overview -->
-                <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 px-2">Overview</h3>
-                    <ul class="space-y-1">
-                        <li>
-                            <button onclick="switchSection('quickstart')" id="nav-quickstart" class="active-nav w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-300 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="zap" class="w-4 h-4 text-brand-400"></i>
-                                <span>Quickstart</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('architecture')" id="nav-architecture" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="cpu" class="w-4 h-4"></i>
-                                <span>Architecture</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('security')" id="nav-security" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="shield" class="w-4 h-4"></i>
-                                <span>Security & GDPR</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Group 2: Interfaces -->
-                <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 px-2">Interfaces</h3>
-                    <ul class="space-y-1">
-                        <li>
-                            <button onclick="switchSection('rest-api')" id="nav-rest-api" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="globe" class="w-4 h-4"></i>
-                                <span>REST API</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('cli-tool')" id="nav-cli-tool" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="terminal" class="w-4 h-4"></i>
-                                <span>CLI Batch Tool</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('mcp-agent')" id="nav-mcp-agent" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="bot" class="w-4 h-4"></i>
-                                <span>MCP Agent SDK</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Group 3: Core Detectors -->
-                <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 px-2">Detection Engine</h3>
-                    <ul class="space-y-1">
-                        <li>
-                            <button onclick="switchSection('regex-detectors')" id="nav-regex-detectors" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="hash" class="w-4 h-4"></i>
-                                <span>Regex Rules</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('checksum-validators')" id="nav-checksum-validators" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="calculator" class="w-4 h-4"></i>
-                                <span>Checksums (IBAN/Card)</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('ner-model')" id="nav-ner-model" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="brain" class="w-4 h-4"></i>
-                                <span>French/English NER</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Group 4: Deployment & Demo -->
-                <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 px-2">Deployment & Tooling</h3>
-                    <ul class="space-y-1">
-                        <li>
-                            <button onclick="switchSection('docker-deploy')" id="nav-docker-deploy" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="box" class="w-4 h-4"></i>
-                                <span>Docker Container</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="switchSection('playground')" id="nav-playground" class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
-                                <i data-lucide="sparkles" class="w-4 h-4 text-brand-400"></i>
-                                <span>Live Demo</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-            </div>
-        </aside>
-
-        <!-- MAIN ARTICLE CONTENT -->
-        <main class="flex-1 min-w-0 max-w-3xl space-y-10">
-            
-            <!-- SECTION 1: QUICKSTART -->
-            <section id="section-quickstart" class="space-y-6">
-                <!-- Breadcrumbs & Header -->
-                <div>
-                    <div class="text-xs font-mono text-brand-400 mb-1">Overview / Quickstart</div>
-                    <div class="flex items-center justify-between gap-4">
-                        <h1 class="text-3xl font-extrabold text-white tracking-tight">Quickstart</h1>
-                        <button onclick="copyCurrentPage()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors">
-                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                            <span id="copy-page-text">Copy link</span>
-                        </button>
-                    </div>
-                    <p class="mt-2 text-slate-400 text-base leading-relaxed">
-                        Get started with <strong class="text-white">AnonShield</strong> — a zero-trust, $0 local anonymizer for French and English documents.
-                        Redact sensitive personal identifiable information (PII) before sending context to LLMs, then restore original values seamlessly.
-                    </p>
-                </div>
-
-                <!-- Three Approaches Card Grid -->
-                <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-                    <div class="p-4 border-b border-slate-800 font-semibold text-sm text-slate-200 bg-slate-900/80">
-                        Three ways to integrate AnonShield:
-                    </div>
-                    <div class="divide-y divide-slate-800 text-sm">
-                        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-2 hover:bg-slate-800/30 transition-colors">
-                            <div class="font-bold text-brand-400 flex items-center gap-2">
-                                <i data-lucide="globe" class="w-4 h-4"></i>
-                                <a href="#rest-api" onclick="switchSection('rest-api')" class="hover:underline">REST API</a>
-                            </div>
-                            <div class="md:col-span-2 text-slate-300">
-                                Full programmatic control for Python, Node.js, and web backends (`/anonymize` & `/restore`).
-                            </div>
-                        </div>
-                        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-2 hover:bg-slate-800/30 transition-colors">
-                            <div class="font-bold text-brand-400 flex items-center gap-2">
-                                <i data-lucide="terminal" class="w-4 h-4"></i>
-                                <a href="#cli-tool" onclick="switchSection('cli-tool')" class="hover:underline">CLI Batch Tool</a>
-                            </div>
-                            <div class="md:col-span-2 text-slate-300">
-                                Command-line utility for shell scripts and batch document processing (`anon ./docs/*.pdf`).
-                            </div>
-                        </div>
-                        <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-2 hover:bg-slate-800/30 transition-colors">
-                            <div class="font-bold text-brand-400 flex items-center gap-2">
-                                <i data-lucide="bot" class="w-4 h-4"></i>
-                                <a href="#mcp-agent" onclick="switchSection('mcp-agent')" class="hover:underline">MCP Agent SDK</a>
-                            </div>
-                            <div class="md:col-span-2 text-slate-300">
-                                Native Model Context Protocol tools for AI agents (Claude Desktop, Cursor, LangChain).
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Callout Box 1: Info -->
-                <div class="p-4 rounded-xl border border-blue-500/30 bg-blue-950/20 text-blue-200 text-sm flex gap-3">
-                    <i data-lucide="info" class="w-5 h-5 text-blue-400 shrink-0 mt-0.5"></i>
-                    <div>
-                        <strong class="font-semibold text-white block mb-0.5">Zero Data Leakage Guarantee</strong>
-                        AnonShield runs 100% locally on CPU. By mounting your files as read-only (<code class="font-mono text-xs bg-blue-900/50 px-1 py-0.5 rounded text-blue-300">:ro</code>) inside Docker, no text or credentials ever leave your infrastructure.
-                    </div>
-                </div>
-
-                <!-- Callout Box 2: Tip -->
-                <div class="p-4 rounded-xl border border-brand-500/30 bg-brand-950/20 text-slate-300 text-sm flex gap-3">
-                    <i data-lucide="lightbulb" class="w-5 h-5 text-brand-400 shrink-0 mt-0.5"></i>
-                    <div>
-                        <strong class="font-semibold text-white block mb-0.5">Interactive Swagger Documentation</strong>
-                        Once the container is running locally, visit <a href="http://localhost:8000/docs" target="_blank" class="text-brand-400 underline font-mono text-xs">http://localhost:8000/docs</a> to explore live OpenAPI endpoint schemas.
-                    </div>
-                </div>
-
-                <!-- CODE SNIPPET BLOCK WITH LANGUAGE SWITCHER -->
-                <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 shadow-2xl">
-                    <!-- Code Block Header -->
-                    <div class="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs font-medium">
-                        <!-- Code Language Tabs -->
-                        <div class="flex items-center gap-1 font-mono text-slate-400">
-                            <button onclick="switchCodeLang('python')" id="code-btn-python" class="px-2.5 py-1 rounded bg-slate-800 text-brand-400 font-semibold transition-colors">Python</button>
-                            <button onclick="switchCodeLang('curl')" id="code-btn-curl" class="px-2.5 py-1 rounded hover:text-white transition-colors">cURL</button>
-                            <button onclick="switchCodeLang('ts')" id="code-btn-ts" class="px-2.5 py-1 rounded hover:text-white transition-colors">TypeScript</button>
-                            <button onclick="switchCodeLang('mcp')" id="code-btn-mcp" class="px-2.5 py-1 rounded hover:text-white transition-colors">MCP Config</button>
-                        </div>
-                        <!-- Action Icons -->
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <button onclick="copyCodeSnippet()" class="p-1 hover:text-white flex items-center gap-1 text-[11px]" title="Copy Code">
-                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                <span id="copy-code-status">Copy</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Code Display Area -->
-                    <pre class="p-4 text-xs font-mono text-slate-200 overflow-x-auto leading-relaxed bg-[#0b0f19]"><code id="code-display">import requests
-
-url = "http://localhost:8000/anonymize"
-headers = {"X-API-Key": "your_secret_key"}
-
-# 1. Anonymize document text
-payload = {
-    "text": "Contract between John Doe (john@example.com) and Acme Corp on 03/15/2024. IBAN: GB29NWBK60161331926819.",
-    "reversible": True
+<style>
+:root {
+    --bg: 1 4 5;
+    --soft: 7 13 16;
+    --surface: 11 19 23;
+    --surface2: 16 26 31;
+    --line: 24 36 42;
+    --linesoft: 15 25 30;
+    --ink: 233 240 243;
+    --inksoft: 148 163 170;
+    --inkdim: 98 113 120;
+    --accent: 200 255 0;
+    --accentink: 200 255 0;
+}
+html.light {
+    --bg: 255 255 255;
+    --soft: 249 251 249;
+    --surface: 242 246 240;
+    --surface2: 232 238 228;
+    --line: 219 227 214;
+    --linesoft: 233 239 229;
+    --ink: 15 20 12;
+    --inksoft: 74 84 70;
+    --inkdim: 140 150 136;
+    --accent: 200 255 0;
+    --accentink: 90 120 0;
 }
 
-response = requests.post(url, json=payload, headers=headers)
-result = response.json()
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 8rem;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+}
+body {
+    background-color: rgb(var(--bg));
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+}
 
-print(result["redacted_text"])
-# Output: "Contract between [PERSON_1] ([EMAIL_1]) and [ORG_1] on [DATE_1]. IBAN: [IBAN_1]."
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--line)); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--inkdim)); }
 
-print(result["mapping_id"])
-# Output: "map_a98f12c"</code></pre>
-                </div>
+/* every icon is lime, per spec */
+.icon, svg.lucide { color: #C8FF00; width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; flex-shrink: 0; }
+svg.lucide { stroke: currentColor; }
 
-            </section>
+/* sidebar item */
+.navitem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    color: rgb(var(--inksoft)); font-size: 14px;
+    transition: background-color .12s, color .12s;
+    width: 100%; text-align: left;
+}
+.navitem:hover { color: rgb(var(--ink)); }
+.navitem.active {
+    background: rgba(200,255,0,0.12);
+    color: #C8FF00;
+    font-weight: 500;
+}
+.navitem.active span:not(.navico) { color: #C8FF00; }
 
+.navgroup-title {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; margin-bottom: 8px;
+    font-size: 13.5px; font-weight: 600; color: rgb(var(--ink));
+}
 
-            <!-- SECTION 2: LIVE PLAYGROUND (INTERACTIVE DEMO) -->
-            <section id="section-playground" class="space-y-6 pt-6 border-t border-slate-800/80">
-                <div>
-                    <div class="text-xs font-mono text-brand-400 mb-1">Interactive / Live Simulator</div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">AnonShield Live Playground</h2>
-                    <p class="text-slate-400 text-sm mt-1">
-                        Test the hybrid detection engine in real time. Type or paste text containing PII below and watch the placeholders generated instantly.
-                    </p>
-                </div>
+/* tabs */
+.tablink {
+    position: relative; display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 4px; font-size: 14px; color: rgb(var(--inksoft));
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .12s, border-color .12s;
+}
+.tablink:hover { color: rgb(var(--ink)); }
+.tablink.active { color: #C8FF00; border-bottom-color: #C8FF00; font-weight: 500; }
 
-                <div class="grid grid-cols-1 gap-4 p-5 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md">
-                    <!-- Input Text Area -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Input Document Text</label>
-                        <textarea id="playground-input" rows="4" class="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 font-mono text-xs focus:outline-none focus:border-brand-400/80 transition-colors leading-relaxed" placeholder="Type document content with names, emails, phones, IBANs, or dates...">Contract Agreement between John Doe (email: john.doe@company.org, phone: (555) 123-4567) and Acme Corp. Payment to IBAN GB29 NWBK 6016 1331 9268 19 on 03/15/2024 in ZIP 90210.</textarea>
-                    </div>
+/* prose */
+.prose h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 2.2rem 0 0.9rem; color: rgb(var(--ink)); }
+.prose h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 1.8rem 0 0.7rem; color: rgb(var(--ink)); }
+.prose p { color: rgb(var(--inksoft)); line-height: 1.75; margin-bottom: 1rem; font-size: 15px; }
+.prose a { color: #C8FF00; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+html.light .prose a { color: rgb(var(--accentink)); }
+.prose a:hover { opacity: .85; }
+.prose strong { color: rgb(var(--ink)); font-weight: 600; }
+.prose ul { margin: 0 0 1rem; padding-left: 0; list-style: none; }
+.prose ul li { color: rgb(var(--inksoft)); line-height: 1.75; font-size: 15px; padding-left: 1.35rem; position: relative; margin-bottom: 6px; }
+.prose ul li::before { content: ""; position: absolute; left: 0.3rem; top: 0.72em; width: 5px; height: 5px; border-radius: 2px; background: #C8FF00; }
+.prose code {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    background: rgb(var(--surface)); border: 1px solid rgb(var(--linesoft));
+    padding: 2px 6px; border-radius: 5px; color: rgb(var(--ink));
+}
 
-                    <!-- Process Buttons -->
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            <button onclick="runPlaygroundAnonymize()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand-400 text-slate-950 hover:bg-brand-500 transition-all flex items-center gap-2 shadow-md shadow-brand-400/20">
-                                <i data-lucide="shield-alert" class="w-4 h-4"></i>
-                                Anonymize Text
-                            </button>
-                            <button onclick="runPlaygroundRestore()" id="btn-restore" disabled class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                                Restore Original
-                            </button>
-                        </div>
-                        <span id="detection-stats" class="text-xs font-mono text-slate-400 hidden">Detected <span class="text-brand-400 font-bold" id="stat-count">0</span> entities</span>
-                    </div>
+/* code block */
+.codeblock { border: 1px solid rgb(var(--linesoft)); border-radius: 12px; overflow: hidden; background: rgb(var(--soft)); margin: 1.25rem 0; }
+.codeblock .cb-head { display: flex; align-items: center; gap: 20px; padding: 0 14px; border-bottom: 1px solid rgb(var(--linesoft)); background: rgb(var(--bg)); }
+.codeblock .cb-tab { padding: 12px 2px; font-size: 13px; color: rgb(var(--inkdim)); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.codeblock .cb-tab.active { color: #C8FF00; border-bottom-color: #C8FF00; }
+.codeblock .cb-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.codeblock .cb-actions button { padding: 5px; border-radius: 6px; }
+.codeblock .cb-actions button:hover { background: rgb(var(--surface)); }
+.codeblock .cb-body { display: flex; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; overflow-x: auto; }
+.codeblock .cb-gutter { padding: 16px 0; text-align: right; color: rgb(var(--inkdim)); user-select: none; min-width: 52px; border-right: 1px solid rgb(var(--linesoft)); }
+.codeblock .cb-gutter div { padding: 0 14px 0 8px; }
+.codeblock .cb-code { padding: 16px 18px; white-space: pre; color: rgb(var(--ink)); flex: 1; }
+.codeblock .tok-key { color: #c792ea; }
+.codeblock .tok-str { color: #C8FF00; }
+.codeblock .tok-com { color: rgb(var(--inkdim)); }
+.codeblock .tok-fn { color: #82aaff; }
 
-                    <!-- Output Redacted View -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Anonymized Output (Safe for LLM)</label>
-                        <div id="playground-output" class="w-full p-3 min-h-[90px] rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap">
-                            <span class="text-slate-600 italic">Click "Anonymize Text" to simulate detection...</span>
-                        </div>
-                    </div>
+/* callout */
+.callout { display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px; font-size: 14px; border: 1px solid rgb(var(--linesoft)); background: rgb(var(--soft)); color: rgb(var(--inksoft)); }
+.callout .icon, .callout svg.lucide { margin-top: 1px; }
 
-                    <!-- Mapping Store JSON Display -->
-                    <div id="mapping-container" class="hidden">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-                            <span>Reversible Mapping Store (<span class="font-mono text-brand-400" id="mapping-id-display">map_x8f91a</span>)</span>
-                            <span class="text-[10px] text-amber-400 font-mono">In-Memory TTL: 15m</span>
-                        </label>
-                        <pre id="playground-mapping" class="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-brand-400/90 font-mono text-[11px] overflow-x-auto"></pre>
-                    </div>
-                </div>
-            </section>
+/* card grid */
+.card { border: 1px solid rgb(var(--linesoft)); border-radius: 12px; background: rgb(var(--soft)); padding: 16px; }
+.card .cico { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(200,255,0,0.12); font-size: 16px; margin-bottom: 12px; }
 
+/* table */
+table.api { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.api th { text-align: left; padding: 10px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: rgb(var(--inkdim)); border-bottom: 1px solid rgb(var(--linesoft)); font-weight: 600; }
+table.api td { padding: 12px 16px; border-bottom: 1px solid rgb(var(--linesoft)); color: rgb(var(--inksoft)); }
+table.api td:first-child { font-family: 'JetBrains Mono', monospace; color: #C8FF00; font-size: 12.5px; }
+.method { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.method.post { background: rgba(200,255,0,0.14); color: #C8FF00; }
+.method.get { background: rgba(96,165,250,0.14); color: #7cb0f5; }
+.endpoint { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: rgb(var(--ink)); }
 
-            <!-- SECTION 3: REST API REFERENCE -->
-            <section id="section-rest-api" class="space-y-6 pt-6 border-t border-slate-800/80">
-                <div>
-                    <div class="text-xs font-mono text-brand-400 mb-1">Interfaces / REST API</div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">REST API Reference</h2>
-                    <p class="text-slate-400 text-sm mt-1">
-                        High-performance FastAPI endpoints running locally at <code class="font-mono text-xs bg-slate-900 px-1.5 py-0.5 rounded text-slate-200">http://localhost:8000</code>.
-                    </p>
-                </div>
+/* toc */
+.toc a { display: block; padding: 5px 0; font-size: 13.5px; color: rgb(var(--inksoft)); }
+.toc a:hover { color: rgb(var(--ink)); }
+.toc a.sub { padding-left: 20px; font-size: 13px; }
+.toc a.active { color: #C8FF00; font-weight: 500; }
 
-                <!-- Endpoint Cards -->
-                <div class="space-y-4">
-                    
-                    <!-- POST /anonymize -->
-                    <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 text-[11px] font-bold font-mono rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POST</span>
-                            <code class="font-mono text-sm font-semibold text-white">/anonymize</code>
-                            <span class="text-xs text-slate-400 ml-auto">Anonymize raw text or PDF upload</span>
-                        </div>
-                        <p class="text-xs text-slate-300">
-                            Accepts JSON <code class="font-mono text-slate-200">{"text": "..."}</code> or multipart PDF file upload. Extracts text, runs hybrid detectors, replaces PII with stable placeholders, and stores mapping in memory.
-                        </p>
-                        <div class="text-xs font-mono text-slate-400 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                            <strong>Headers:</strong> <code class="text-slate-200">X-API-Key: &lt;YOUR_SECRET_KEY&gt;</code>
-                        </div>
-                    </div>
+.menu-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 50; min-width: 210px; background: rgb(var(--soft)); border: 1px solid rgb(var(--line)); border-radius: 12px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+.menu-pop button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; color: rgb(var(--inksoft)); }
+.menu-pop button:hover { background: rgb(var(--surface)); color: rgb(var(--ink)); }
+[data-section] { scroll-margin-top: 8rem; }
+</style>
+</head>
 
-                    <!-- POST /restore -->
-                    <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 text-[11px] font-bold font-mono rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POST</span>
-                            <code class="font-mono text-sm font-semibold text-white">/restore</code>
-                            <span class="text-xs text-slate-400 ml-auto">Revert placeholders to original values</span>
-                        </div>
-                        <p class="text-xs text-slate-300">
-                            Accepts JSON <code class="font-mono text-slate-200">{"text": "...", "mapping_id": "map_a98f12c"}</code> and swaps placeholders back to original values.
-                        </p>
-                    </div>
+<body class="font-sans">
 
-                    <!-- GET /health -->
-                    <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-3">
-                        <div class="flex items-center gap-3">
-                            <span class="px-2 py-0.5 text-[11px] font-bold font-mono rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">GET</span>
-                            <code class="font-mono text-sm font-semibold text-white">/health</code>
-                            <span class="text-xs text-slate-400 ml-auto">Container health check</span>
-                        </div>
-                        <p class="text-xs text-slate-300">
-                            Open endpoint (no auth required) used by Docker and monitoring services.
-                        </p>
-                    </div>
+<!-- ===== HEADER ===== -->
+<header class="sticky top-0 z-40 border-b border-linesoft bg-bg/90 backdrop-blur-md">
+    <div class="mx-auto max-w-[1536px] px-6 lg:px-[86px]">
+        <!-- row 1 -->
+        <div class="h-[62px] flex items-center gap-2">
+            <button id="search-btn" class="hidden md:flex items-center gap-2.5 h-9 w-[260px] px-3.5 rounded-full bg-soft border border-linesoft text-inkdim text-sm hover:border-line transition-colors">
+                <i data-lucide="search" class="text-[15px]"></i>
+                <span>Search...</span>
+                <span class="ml-auto text-[11px] font-medium text-inkdim/80 tracking-wide">Ctrl K</span>
+            </button>
 
-                </div>
-            </section>
+            <button id="assistant-btn" class="hidden md:flex items-center gap-2 h-9 px-3.5 rounded-full bg-soft border border-linesoft text-inkdim text-sm hover:border-line transition-colors">
+                <i data-lucide="bot" class="text-[15px]"></i>
+                <span>Ask Assistant</span>
+                <span class="text-[11px] font-medium text-inkdim/80 tracking-wide">Ctrl I</span>
+            </button>
 
+            <nav class="ml-auto hidden lg:flex items-center gap-6 text-[14.5px] text-inksoft" id="topnav"></nav>
 
-            <!-- SECTION 4: CLI TOOL -->
-            <section id="section-cli-tool" class="space-y-6 pt-6 border-t border-slate-800/80">
-                <div>
-                    <div class="text-xs font-mono text-brand-400 mb-1">Interfaces / CLI Batch Tool</div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">CLI Usage (`anon`)</h2>
-                    <p class="text-slate-400 text-sm mt-1">
-                        Built with Typer for batch operations, scripts, and folder processing.
-                    </p>
-                </div>
+            <a href="#authentication" data-goto="authentication" class="ml-auto lg:ml-4 h-9 px-4 rounded-full bg-accent text-[#03080A] text-sm font-semibold flex items-center hover:brightness-105 transition">Sign In</a>
+        </div>
 
-                <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 p-4 font-mono text-xs text-slate-200 space-y-2">
-                    <div class="text-slate-500"># Process all PDFs in contracts folder</div>
-                    <div class="text-brand-400">$ anon ./contracts/*.pdf --out ./clean/ --mapping-out ./mappings/</div>
-                    <div class="text-slate-400 text-[11px]">
-                        Processed 12 files [====================================] 100%<br>
-                        [SUCCESS] contract_1.pdf -> ./clean/contract_1.pdf (Entities: 4 PERSON, 2 IBAN)<br>
-                        [SUCCESS] contract_2.pdf -> ./clean/contract_2.pdf (Entities: 1 EMAIL, 1 PHONE)
-                    </div>
-                </div>
-            </section>
+        <!-- row 2: tabs -->
+        <div class="h-12 flex items-center gap-7 overflow-x-auto" id="tabs"></div>
+    </div>
+</header>
 
+<!-- ===== SHELL ===== -->
+<div class="mx-auto max-w-[1536px] px-6 lg:px-[86px] relative z-10">
+    <div class="flex gap-12 pb-32">
 
-            <!-- SECTION 5: MCP AGENT SDK -->
-            <section id="section-mcp-agent" class="space-y-6 pt-6 border-t border-slate-800/80">
-                <div>
-                    <div class="text-xs font-mono text-brand-400 mb-1">Interfaces / Agent SDK</div>
-                    <h2 class="text-2xl font-bold text-white tracking-tight">MCP Server (Model Context Protocol)</h2>
-                    <p class="text-slate-400 text-sm mt-1">
-                        Exposes two native tools to AI agents: <code class="font-mono text-xs bg-slate-900 px-1.5 py-0.5 rounded text-brand-400">anonymize_document(path)</code> and <code class="font-mono text-xs bg-slate-900 px-1.5 py-0.5 rounded text-brand-400">restore_text(text, mapping_id)</code>.
-                    </p>
-                </div>
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="hidden lg:block w-[248px] shrink-0 py-9">
+            <nav class="sticky top-[132px] max-h-[calc(100vh-160px)] overflow-y-auto pr-2" id="sidebarnav"></nav>
+        </aside>
 
-                <div class="p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-xs text-slate-300 space-y-2">
-                    <p>
-                        Add to your <code class="font-mono text-slate-200">claude_desktop_config.json</code> or Cursor settings:
-                    </p>
-                    <pre class="p-3 rounded-lg bg-slate-950 font-mono text-brand-400/90 overflow-x-auto">{
-  "mcpServers": {
-    "anonshield": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "-v", "/home/me/docs:/data:ro",
-        "ghcr.io/seddzz/anonymizer",
-        "python", "-m", "anonymizer.mcp"
-      ]
-    }
-  }
-}</pre>
-                </div>
-            </section>
-
+        <!-- MAIN -->
+        <main class="flex-1 min-w-0 max-w-[752px] py-9">
+            <div id="content"></div>
         </main>
 
-        <!-- RIGHT SIDEBAR: ON THIS PAGE (TABLE OF CONTENTS) -->
-        <aside class="w-52 shrink-0 hidden xl:block sticky top-28 h-[calc(100vh-8rem)] text-xs font-medium space-y-3">
-            <h3 class="text-slate-400 font-semibold tracking-wide uppercase text-[11px]">On this page</h3>
-            <ul class="space-y-2 border-l border-slate-800 pl-3 text-slate-400">
-                <li><a href="#quickstart" onclick="switchSection('quickstart')" class="hover:text-brand-400 transition-colors block text-brand-400">Quickstart</a></li>
-                <li><a href="#playground" onclick="switchSection('playground')" class="hover:text-brand-400 transition-colors block">Live Playground</a></li>
-                <li><a href="#rest-api" onclick="switchSection('rest-api')" class="hover:text-brand-400 transition-colors block">REST API Reference</a></li>
-                <li><a href="#cli-tool" onclick="switchSection('cli-tool')" class="hover:text-brand-400 transition-colors block">CLI Usage (`anon`)</a></li>
-                <li><a href="#mcp-agent" onclick="switchSection('mcp-agent')" class="hover:text-brand-400 transition-colors block">MCP Agent Tool</a></li>
-                <li><a href="#docker-deploy" onclick="switchSection('docker-deploy')" class="hover:text-brand-400 transition-colors block">Docker Deployment</a></li>
-            </ul>
+        <!-- TOC -->
+        <aside class="hidden xl:block w-[238px] shrink-0 py-9">
+            <div class="sticky top-[132px]">
+                <div class="flex items-center justify-between mb-3.5">
+                    <div class="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                        <i data-lucide="list-ordered" class="text-[15px]"></i>
+                        <span>On this page</span>
+                    </div>
+                    <button class="copy-link text-inksoft hover:text-ink" title="Copy link">
+                        <i data-lucide="link" class="text-[14px]"></i>
+                    </button>
+                </div>
+                <div class="toc" id="toc"></div>
+            </div>
         </aside>
-
     </div>
+</div>
 
-    <!-- SEARCH MODAL (CTRL+K) -->
-    <div id="search-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-start justify-center pt-20 px-4">
-        <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div class="p-3 border-b border-slate-800 flex items-center gap-3">
-                <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
-                <input id="search-input" type="text" placeholder="Search documentation..." class="w-full bg-transparent text-white text-sm focus:outline-none placeholder-slate-500">
-                <button onclick="toggleSearchModal(false)" class="text-xs text-slate-500 hover:text-white px-2 py-1 rounded bg-slate-800">ESC</button>
-            </div>
-            <div id="search-results" class="p-3 max-h-80 overflow-y-auto space-y-1 text-xs">
-                <div class="text-slate-500 p-2 text-center">Type to search quickstart, API endpoints, CLI, or MCP agent tools...</div>
-            </div>
+<!-- ===== FLOATING ASK BAR ===== -->
+<div class="fixed bottom-5 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
+    <div class="pointer-events-auto w-full max-w-[640px] flex items-center gap-2 h-14 pl-5 pr-2 rounded-2xl bg-soft border border-line shadow-[0_10px_40px_rgba(0,0,0,0.55)]">
+        <input id="ask-input" type="text" placeholder="Ask a question..." class="flex-1 bg-transparent text-[15px] text-ink placeholder-inkdim focus:outline-none">
+        <button id="ask-send" class="w-9 h-9 rounded-full bg-accent flex items-center justify-center hover:brightness-105 transition" aria-label="Send">
+            <i data-lucide="arrow-up" style="color:#03080A" class="text-[17px]"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ===== SEARCH MODAL ===== -->
+<div id="search-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-start justify-center pt-28 px-4">
+    <div class="w-full max-w-[560px] bg-soft border border-line rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-3.5 border-b border-linesoft flex items-center gap-3">
+            <i data-lucide="search" class="text-[18px]"></i>
+            <input id="search-input" type="text" placeholder="Search documentation..." class="w-full bg-transparent text-ink text-sm focus:outline-none placeholder-inkdim">
+            <button id="search-close" class="text-[11px] text-inkdim hover:text-ink px-2 py-1 rounded bg-surface border border-linesoft">ESC</button>
         </div>
+        <div id="search-results" class="p-2 max-h-80 overflow-y-auto text-sm"></div>
     </div>
+</div>
 
+<script>
+/* ---------- icon helper (lucide) ---------- */
+const LUCIDE = {
+    code: 'code', doc: 'book', agent: 'hexagon', cookbook: 'book-open',
+    panel: 'panel-left', lines: 'align-left', layers: 'layers', gauge: 'gauge',
+    lock: 'lock', gear: 'settings', warn: 'triangle-alert', refresh: 'refresh-cw',
+    branch: 'git-branch', history: 'history', chevron: 'chevron-right', chevrondown: 'chevron-down',
+    list: 'list-ordered', copy: 'copy', search: 'search', sparkle: 'sparkles',
+    moon: 'moon', sun: 'sun', up: 'arrow-up', terminal: 'terminal', box: 'box',
+    db: 'database', info: 'info', expand: 'maximize-2', github: 'github'
+};
+const ic = (name, cls = '') => '<i data-lucide="' + (LUCIDE[name] || name) + '" class="' + cls + '"></i>';
+const paintIcons = () => { if (window.lucide && lucide.createIcons) lucide.createIcons(); };
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        // Code Snippet Examples Data
-        const codeSnippets = {
-            python: `import requests
+const TOPNAV = [
+    { label: 'Playground', goto: 'playground' },
+    { label: 'Detection', goto: 'detection' },
+    { label: 'CLI', goto: 'cli' },
+    { label: 'Agent SDK', goto: 'mcp' },
+    { label: 'Pricing', goto: 'limits' }
+];
 
-url = "http://localhost:8000/anonymize"
-headers = {"X-API-Key": "your_secret_key"}
+const TABS = [
+    { id: 'docs', label: 'Docs', icon: 'doc' },
+    { id: 'api', label: 'API Reference', icon: 'code' },
+    { id: 'cli', label: 'CLI', icon: 'terminal' },
+    { id: 'mcp', label: 'Agent SDK', icon: 'agent' },
+    { id: 'cookbook', label: 'Cookbook', icon: 'cookbook' }
+];
 
-# 1. Anonymize document text
-payload = {
-    "text": "Contract between John Doe (john@example.com) and Acme Corp on 03/15/2024. IBAN: GB29NWBK60161331926819.",
-    "reversible": True
+const NAV = [
+    { group: 'API Guides', icon: 'code', items: [
+        { id: 'api', label: 'Overview', icon: 'panel' },
+        { id: 'extraction', label: 'Extraction', icon: 'lines' },
+        { id: 'detection', label: 'Detection', icon: 'layers' },
+        { id: 'checksums', label: 'Checksums', icon: 'gauge' },
+        { id: 'ner', label: 'NER Model', icon: 'box' },
+        { id: 'limits', label: 'Limits', icon: 'gauge' },
+        { id: 'authentication', label: 'Authentication', icon: 'lock' },
+        { id: 'parameters', label: 'Parameters', icon: 'gear' },
+        { id: 'errors', label: 'Errors and Debugging', icon: 'warn' },
+        { id: 'responses', label: 'Responses API', icon: 'refresh', chevron: true }
+    ]},
+    { group: 'Versioning', icon: 'branch', items: [
+        { id: 'versioning', label: 'API Versioning', icon: 'branch' },
+        { id: 'changelog', label: 'API Changelog', icon: 'history' }
+    ]},
+    { group: 'API Reference', icon: 'code', items: [
+        { id: 'playground', label: 'Playground', chevron: true },
+        { id: 'cli', label: 'CLI', chevron: true },
+        { id: 'docker', label: 'Docker', chevron: true },
+        { id: 'mcp', label: 'Agent SDK', chevron: true },
+        { id: 'batch', label: 'Batch', chevron: true }
+    ]}
+];
+
+const CODE_REQ = `// Definitions of subtypes are below
+type Request = {
+  // Either "messages" or "prompt" is required
+  messages?: Message[];
+  prompt?: string;
+
+  // Detection pipeline
+  detectors?: ("regex" | "checksum" | "ner")[];
+  reversible?: boolean;
+
+  // Optional TTL for the reversible mapping
+  mapping_ttl_seconds?: number;
+};`;
+
+const CODE_CLI = `# Anonymize every PDF in a folder
+$ anon ./contracts/*.pdf --out ./clean/ --mapping-out ./mappings/
+
+# Restore a redacted file back to its original text
+$ anon restore ./clean/contract.txt \\
+    --mapping ./mappings/contract.json --out ./restored/`;
+
+function codeBlock(tabs, activeIdx, code) {
+    const head = tabs.map((t, i) => '<div class="cb-tab' + (i === activeIdx ? ' active' : '') + '">' + t + '</div>').join('');
+    const lines = code.split('\n');
+    const gutter = lines.map((_, i) => '<div>' + (i + 1) + '</div>').join('');
+    return '<figure class="codeblock" data-code="' + encodeURIComponent(code) + '">' +
+        '<figcaption class="cb-head">' + head +
+        '<div class="cb-actions">' +
+        '<button title="Info">' + ic('info', 'text-[15px]') + '</button>' +
+        '<button class="cb-copy" title="Copy">' + ic('copy', 'text-[15px]') + '</button>' +
+        '<button title="Expand">' + ic('expand', 'text-[15px]') + '</button>' +
+        '</div></figcaption>' +
+        '<div class="cb-body"><div class="cb-gutter">' + gutter + '</div>' +
+        '<div class="cb-code">' + esc(code) + '</div></div></figure>';
 }
 
-response = requests.post(url, json=payload, headers=headers)
-result = response.json()
+const CONTENT = {
+    api: {
+        crumb: 'API Guides',
+        title: 'API Reference',
+        sub: "An overview of AnonShield's API",
+        toc: [
+            { id: 'openapi', label: 'OpenAPI specification', level: 0, active: true },
+            { id: 'requests', label: 'Requests', level: 0 },
+            { id: 'completions-format', label: 'Completions request format', level: 1 },
+            { id: 'structured', label: 'Structured outputs', level: 1 },
+            { id: 'plugins', label: 'Plugins', level: 1 },
+            { id: 'headers', label: 'Headers', level: 1 },
+            { id: 'prefill', label: 'Assistant prefill', level: 1 },
+            { id: 'responses-sec', label: 'Responses', level: 0 },
+            { id: 'completions-response', label: 'CompletionsResponse format', level: 1 },
+            { id: 'finish-reason', label: 'Finish reason', level: 1 },
+            { id: 'cost', label: 'Querying cost and stats', level: 1 }
+        ],
+        body: `
+        <p>AnonShield's request and response schemas are deliberately small. At a high level, <strong>the same <code>Entity</code> shape flows through every endpoint</strong> — detection, redaction and restore all speak it — so you only need to learn one format.</p>
 
-print(result["redacted_text"])
-# Output: "Contract between [PERSON_1] ([EMAIL_1]) and [ORG_1] on [DATE_1]. IBAN: [IBAN_1]."
+        <h2 id="openapi">OpenAPI specification</h2>
+        <p>The complete AnonShield API is documented using the OpenAPI specification. You can access the specification in either YAML or JSON format:</p>
+        <ul>
+            <li><strong>YAML</strong>: <a href="#openapi" data-goto="api">https://localhost:8000/openapi.yaml</a></li>
+            <li><strong>JSON</strong>: <a href="#openapi" data-goto="api">https://localhost:8000/openapi.json</a></li>
+        </ul>
+        <p>These specifications can be used with tools like <a href="#openapi" data-goto="api">Swagger UI</a>, <a href="#openapi" data-goto="api">Postman</a>, or any OpenAPI-compatible code generator to explore the API or generate client libraries.</p>
 
-print(result["mapping_id"])
-# Output: "map_a98f12c"`,
+        <h2 id="requests">Requests</h2>
+        <h3 id="completions-format">Completions request format</h3>
+        <p>Below is a complete list of parameters for the <code>/anonymize</code> endpoint. Only <code>text</code> is required; every other field falls back to a sensible default.</p>
+        ${codeBlock(['Request Schema', 'Response'], 0, CODE_REQ)}
+        <p>Send a POST request with a JSON body, or upload a file with <code>multipart/form-data</code> for PDF ingestion. Authentication is always via the <code>X-API-Key</code> header.</p>
 
-            curl: `# Anonymize raw text via REST API
-curl -X POST "http://localhost:8000/anonymize" \\
-     -H "X-API-Key: your_secret_key" \\
-     -H "Content-Type: application/json" \\
-     -d '{"text": "John Doe (john@example.com) - IBAN: GB29NWBK60161331926819"}'
+        <h2 id="responses-sec">Responses</h2>
+        <p>Every response returns the redacted text, the stable placeholder mapping and the detected entities. Pass the <code>mapping_id</code> to <code>/restore</code> to recover the originals.</p>
+        <div class="callout mt-2">${ic('info', 'text-[16px]')}<div><strong class="text-ink">Reversible by default.</strong> Mappings live in memory with a 15&nbsp;minute TTL and never touch disk unless you explicitly export them.</div></div>
+        `
+    },
+    docs: {
+        crumb: 'Getting Started',
+        title: 'Introduction',
+        sub: 'Redact PII locally, then put it back',
+        toc: [{ id: 'install', label: 'Installation', level: 0 }, { id: 'first-call', label: 'Your first call', level: 0 }, { id: 'pipeline', label: 'The pipeline', level: 0 }],
+        body: `
+        <p><strong>AnonShield</strong> is a zero-trust, <strong>$0</strong> anonymizer for English documents. It strips personally identifiable information before the text ever reaches a model, then restores the exact original values on the way back.</p>
+        <h2 id="install">Installation</h2>
+        <p>Install the package with CPU-only PyTorch, or run the prebuilt container.</p>
+        <div class="callout mt-2">${ic('terminal', 'text-[16px]')}<div><code>pip install -e ".[dev]"</code> — then <code>uvicorn anonymizer.api:app</code> to serve the API.</div></div>
+        <h2 id="first-call">Your first call</h2>
+        <p>POST some text to <code>/anonymize</code> and read the placeholders from <code>redacted_text</code>. That's the whole loop.</p>
+        <h2 id="pipeline">The pipeline</h2>
+        <p>Extraction preserves character offsets, detectors all return the same <code>Entity</code> type, and overlapping spans are resolved before rewriting. Because offsets survive the round trip, redaction is lossless.</p>
+        `
+    },
+    extraction: {
+        crumb: 'API Guides',
+        title: 'Extraction',
+        sub: 'Text and page offsets from PDFs',
+        toc: [{ id: 'ex-1', label: 'Text-based PDFs', level: 0 }, { id: 'ex-2', label: 'Scanned documents', level: 0 }],
+        body: `
+        <p>Extraction converts a document into a list of pages with the raw text and the character offsets that map it back to the source.</p>
+        <h2 id="ex-1">Text-based PDFs</h2>
+        <p>PyMuPDF yields per-page text plus offsets, so later stages can point at exact spans without re-parsing the file.</p>
+        <h2 id="ex-2">Scanned documents</h2>
+        <p>Image-only PDFs raise <code>ScannedDocumentError</code> instead of silently returning nothing, so callers can route them to OCR.</p>
+        `
+    },
+    detection: {
+        crumb: 'API Guides',
+        title: 'Detection',
+        sub: 'Regex, checksums and NER working together',
+        toc: [{ id: 'd-regex', label: 'Regex rules', level: 0 }, { id: 'd-check', label: 'Checksum validators', level: 0 }, { id: 'd-ner', label: 'Transformer NER', level: 0 }],
+        body: `
+        <p>Every detector implements the same <code>Detector</code> protocol and returns <code>Entity</code> objects, so results merge cleanly regardless of source.</p>
+        <h2 id="d-regex">Regex rules</h2>
+        <p>Fast, predictable matches for email, phone, ZIP and dates.</p>
+        <h2 id="d-check">Checksum validators</h2>
+        <p>Structural validation removes the false positives raw regex would keep.</p>
+        <h2 id="d-ner">Transformer NER</h2>
+        <p>Names, organisations and locations that patterns can never catch.</p>
+        `
+    },
+    checksums: {
+        crumb: 'API Guides',
+        title: 'Checksums',
+        sub: 'Structural validation for identifiers',
+        toc: [{ id: 'c-iban', label: 'IBAN', level: 0 }, { id: 'c-card', label: 'Card numbers', level: 0 }, { id: 'c-fr', label: 'SIREN / SIRET / NIR', level: 0 }],
+        body: `
+        <h2 id="c-iban">IBAN</h2>
+        <p>ISO 7064 mod-97 check across member-country formats.</p>
+        <h2 id="c-card">Card numbers</h2>
+        <p>Luhn validation on 13–19 digit runs.</p>
+        <h2 id="c-fr">SIREN / SIRET / NIR</h2>
+        <p>Luhn- and mod-97-validated French identifiers, including Corsica and overseas handling.</p>
+        `
+    },
+    ner: {
+        crumb: 'API Guides',
+        title: 'NER Model',
+        sub: 'dslim/bert-base-NER with offset correction',
+        toc: [{ id: 'n-1', label: 'Model & labels', level: 0 }, { id: 'n-2', label: 'Windowing', level: 0 }],
+        body: `
+        <h2 id="n-1">Model &amp; labels</h2>
+        <p>BERT base fine-tuned for NER, emitting <code>PER</code>, <code>ORG</code>, <code>LOC</code> and <code>MISC</code> spans.</p>
+        <h2 id="n-2">Windowing</h2>
+        <p>Long documents are split into overlapping windows; predicted spans are shifted back to the document's original offsets so they line up with regex results.</p>
+        `
+    },
+    limits: {
+        crumb: 'API Guides',
+        title: 'Limits',
+        sub: 'Request, file and rate limits',
+        toc: [{ id: 'l-1', label: 'Request limits', level: 0 }, { id: 'l-2', label: 'Rate limits', level: 0 }],
+        body: `
+        <h2 id="l-1">Request limits</h2>
+        <p>Requests are capped at 10&nbsp;MB of text or a 50&nbsp;page PDF. Larger jobs should use the CLI batch mode.</p>
+        <h2 id="l-2">Rate limits</h2>
+        <p>Local deployments are unthrottled. A hosted tier, if enabled, allows 60 requests/min per key.</p>
+        `
+    },
+    authentication: {
+        crumb: 'API Guides',
+        title: 'Authentication',
+        sub: 'Gate every endpoint with an API key',
+        toc: [{ id: 'a-1', label: 'API keys', level: 0 }, { id: 'a-2', label: 'Errors', level: 0 }],
+        body: `
+        <h2 id="a-1">API keys</h2>
+        <p>Pass <code>X-API-Key: &lt;YOUR_SECRET_KEY&gt;</code> with every request except <code>/health</code>.</p>
+        <h2 id="a-2">Errors</h2>
+        <p>A missing or invalid key returns <code>401</code> with a JSON error body.</p>
+        `
+    },
+    parameters: {
+        crumb: 'API Guides',
+        title: 'Parameters',
+        sub: 'Common request parameters',
+        toc: [{ id: 'p-1', label: 'Body', level: 0 }, { id: 'p-2', label: 'Detectors', level: 0 }],
+        body: `
+        <h2 id="p-1">Body</h2>
+        <table class="api mt-2"><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+        <tr><td>text</td><td>string</td><td>Required unless uploading a file.</td></tr>
+        <tr><td>reversible</td><td>bool</td><td>Store a mapping for <code>/restore</code>.</td></tr>
+        <tr><td>mapping_ttl_seconds</td><td>int</td><td>Default 900.</td></tr>
+        </tbody></table>
+        <h2 id="p-2">Detectors</h2>
+        <p>Restrict the pipeline with <code>detectors: ["regex","checksum","ner"]</code>.</p>
+        `
+    },
+    errors: {
+        crumb: 'API Guides',
+        title: 'Errors and Debugging',
+        sub: 'Status codes and error shapes',
+        toc: [{ id: 'e-1', label: 'Status codes', level: 0 }],
+        body: `
+        <h2 id="e-1">Status codes</h2>
+        <table class="api mt-2"><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>401</td><td>Missing or invalid API key.</td></tr>
+        <tr><td>422</td><td>Body failed schema validation.</td></tr>
+        <tr><td>500</td><td>Extraction or model failure — see server logs.</td></tr>
+        </tbody></table>
+        `
+    },
+    responses: {
+        crumb: 'API Guides',
+        title: 'Responses API',
+        sub: 'Response shapes and streaming',
+        toc: [{ id: 'r-1', label: 'Shape', level: 0 }],
+        body: `
+        <h2 id="r-1">Shape</h2>
+        <p>All endpoints return JSON. Anonymize returns <code>redacted_text</code>, <code>mapping_id</code> and <code>entities</code>.</p>
+        `
+    },
+    versioning: {
+        crumb: 'Versioning',
+        title: 'API Versioning',
+        sub: 'How breaking changes are shipped',
+        toc: [{ id: 'v-1', label: 'Scheme', level: 0 }],
+        body: `
+        <h2 id="v-1">Scheme</h2>
+        <p>AnonShield follows semantic versioning. The API prefix is stable; breaking changes bump the minor number and are announced in the changelog.</p>
+        `
+    },
+    changelog: {
+        crumb: 'Versioning',
+        title: 'API Changelog',
+        sub: 'Release history',
+        toc: [{ id: 'cl-1', label: 'v0.1.0', level: 0 }],
+        body: `
+        <h2 id="cl-1">v0.1.0</h2>
+        <p>Initial release: extraction, regex + checksum detectors, the <code>Entity</code> model and the documentation you're reading.</p>
+        `
+    },
+    cli: {
+        crumb: 'API Reference',
+        title: 'CLI',
+        sub: 'Batch processing from the terminal',
+        toc: [{ id: 'cli-1', label: 'Anonymize', level: 0 }, { id: 'cli-2', label: 'Restore', level: 0 }],
+        body: `
+        <p>The <code>anon</code> command is built with Typer for shell scripts and folder-wide runs.</p>
+        ${codeBlock(['Shell'], 0, CODE_CLI)}
+        <p>Every file prints a per-file summary line, and mappings are written alongside the cleaned output for later restore.</p>
+        `
+    },
+    docker: {
+        crumb: 'API Reference',
+        title: 'Docker',
+        sub: 'One container, models baked in',
+        toc: [{ id: 'dock-1', label: 'Run', level: 0 }],
+        body: `
+        <h2 id="dock-1">Run</h2>
+        <p>Mount your documents read-only so nothing leaves the perimeter.</p>
+        ${codeBlock(['Shell'], 0, 'docker run -p 8000:8000 \\\n  -e ANON_API_KEY=your_secret_key \\\n  -v "$PWD/docs:/data:ro" \\\n  anonshield')}
+        `
+    },
+    mcp: {
+        crumb: 'API Reference',
+        title: 'Agent SDK',
+        sub: 'Model Context Protocol tools for agents',
+        toc: [{ id: 'mcp-1', label: 'Tools', level: 0 }, { id: 'mcp-2', label: 'Config', level: 0 }],
+        body: `
+        <h2 id="mcp-1">Tools</h2>
+        <p>Two native tools are exposed: <code>anonymize_document(path)</code> and <code>restore_text(text, mapping_id)</code>.</p>
+        <h2 id="mcp-2">Config</h2>
+        <p>Add the server to Claude Desktop or Cursor:</p>
+        ${codeBlock(['JSON'], 0, '{\n  "mcpServers": {\n    "anonshield": {\n      "command": "docker",\n      "args": ["run", "-i", "--rm", "anonshield", "python", "-m", "anonymizer.mcp"]\n    }\n  }\n}')}
+        `
+    },
+    batch: {
+        crumb: 'API Reference',
+        title: 'Batch',
+        sub: 'Process large volumes',
+        toc: [{ id: 'b-1', label: 'Overview', level: 0 }],
+        body: `
+        <h2 id="b-1">Overview</h2>
+        <p>Batch mode processes thousands of files with a single command and writes one mapping per document.</p>
+        `
+    },
+    cookbook: {
+        crumb: 'Cookbook',
+        title: 'Cookbook',
+        sub: 'Recipes for common workflows',
+        toc: [{ id: 'ck-1', label: 'Safe LLM prompts', level: 0 }, { id: 'ck-2', label: 'PII audit', level: 0 }],
+        body: `
+        <h2 id="ck-1">Safe LLM prompts</h2>
+        <p>Anonymize context, send the redacted text to a model, then <code>/restore</code> the reply before showing it to the user.</p>
+        <h2 id="ck-2">PII audit</h2>
+        <p>Run detection only to inventory which entity types appear across a document set.</p>
+        `
+    },
+    playground: {
+        crumb: 'API Reference',
+        title: 'Playground',
+        sub: 'Run detection in your browser',
+        toc: [{ id: 'pg-1', label: 'Try it', level: 0 }],
+        body: `
+        <h2 id="pg-1">Try it</h2>
+        <p>Paste text below. Detection runs entirely client-side — nothing is uploaded.</p>
+        <div class="mt-4 rounded-2xl border border-linesoft bg-soft p-5">
+            <textarea id="pg-input" rows="4" class="w-full p-3 rounded-xl bg-bg border border-linesoft text-ink font-mono text-xs focus:outline-none focus:border-line leading-relaxed">Contract between John Doe (john.doe@acme.org, phone (555) 123-4567) and Acme Corp. Pay to IBAN GB29NWBK60161331926819 on 03/15/2024 at ZIP 90210.</textarea>
+            <div class="flex items-center gap-2 mt-3 flex-wrap">
+                <button id="pg-run" class="h-9 px-4 rounded-full bg-accent text-[#03080A] text-sm font-semibold flex items-center gap-2">${ic('agent', 'text-[16px]')}<span>Anonymize</span></button>
+                <button id="pg-restore" disabled class="h-9 px-4 rounded-full bg-bg border border-line text-inksoft text-sm flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">${ic('refresh', 'text-[16px]')}<span>Restore</span></button>
+                <span id="pg-stats" class="text-xs font-mono text-inkdim ml-auto hidden">Detected <span id="pg-count" class="text-[#C8FF00] font-semibold">0</span> entities</span>
+            </div>
+            <div class="mt-4 text-[11px] font-semibold uppercase tracking-wider text-inkdim mb-2">Anonymized output</div>
+            <div id="pg-output" class="w-full p-3 min-h-[92px] rounded-xl bg-bg border border-linesoft text-inksoft font-mono text-xs leading-relaxed whitespace-pre-wrap"><span class="italic text-inkdim">Click "Anonymize" to simulate detection...</span></div>
+            <div id="pg-map-wrap" class="hidden mt-4">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-inkdim mb-2">Reversible mapping</div>
+                <pre id="pg-map" class="p-3 rounded-xl bg-bg border border-linesoft text-[#C8FF00] font-mono text-[11px] overflow-x-auto"></pre>
+            </div>
+        </div>
+        `
+    }
+};
 
-# Anonymize PDF File Upload
-curl -X POST "http://localhost:8000/anonymize" \\
-     -H "X-API-Key: your_secret_key" \\
-     -F "file=@contract.pdf" \\
-     -F "reversible=true"`,
+/* ---------- render header nav ---------- */
+document.getElementById('topnav').innerHTML = TOPNAV.map(n =>
+    '<button data-goto="' + n.goto + '" class="hover:text-ink transition-colors">' + n.label + '</button>'
+).join('');
 
-            ts: `import fetch from "node-fetch";
+document.getElementById('tabs').innerHTML = TABS.map(t =>
+    '<button class="tablink" data-goto="' + t.id + '">' + ic(t.icon, 'text-[15px]') + '<span>' + t.label + '</span></button>'
+).join('');
 
-const response = await fetch("http://localhost:8000/anonymize", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-API-Key": "your_secret_key"
-  },
-  body: JSON.stringify({
-    text: "Contract between Jane Smith (jane@company.com) and Acme Corp.",
-    reversible: true
-  })
+/* ---------- render sidebar ---------- */
+document.getElementById('sidebarnav').innerHTML = NAV.map(g =>
+    '<div class="mb-7">' +
+        '<div class="navgroup-title">' + ic(g.icon, 'text-[15px]') + '<span>' + g.group + '</span></div>' +
+        '<div class="space-y-0.5">' +
+            g.items.map(it =>
+                '<button class="navitem" data-goto="' + it.id + '">' +
+                    (it.icon ? ic(it.icon, 'text-[16px]') : '') +
+                    '<span class="flex-1">' + it.label + '</span>' +
+                    (it.chevron ? ic('chevron', 'text-[14px]') : '') +
+                '</button>'
+            ).join('') +
+        '</div>' +
+    '</div>'
+).join('');
+
+/* ---------- render section ---------- */
+function renderSection(id) {
+    const data = CONTENT[id];
+    if (!data) return;
+
+    document.getElementById('content').innerHTML =
+        '<section data-section>' +
+            '<p class="text-[13px] font-medium text-[#C8FF00] mb-2">' + data.crumb + '</p>' +
+            '<div class="flex items-start justify-between gap-6 mb-2">' +
+                '<div>' +
+                    '<h1 class="text-[40px] leading-[1.1] font-bold tracking-[-0.03em] text-ink">' + data.title + '</h1>' +
+                    '<p class="text-[17px] text-inksoft mt-3">' + data.sub + '</p>' +
+                '</div>' +
+                '<div class="relative shrink-0 mt-1.5">' +
+                    '<div class="flex items-stretch">' +
+                        '<button class="copy-link flex items-center gap-2 h-9 pl-3 pr-3 rounded-l-full border border-line bg-soft text-[13px] text-inksoft hover:text-ink">' + ic('copy', 'text-[15px]') + '<span>Copy page</span></button>' +
+                        '<button id="copy-menu-btn" class="h-9 px-2 rounded-r-full border border-l border-line bg-soft text-inksoft hover:text-ink">' + ic('chevrondown', 'text-[15px]') + '</button>' +
+                    '</div>' +
+                    '<div id="copy-menu" class="menu-pop hidden">' +
+                        '<button data-menu="copy">' + ic('copy', 'text-[15px]') + '<span>Copy page</span></button>' +
+                        '<button data-menu="md">' + ic('doc', 'text-[15px]') + '<span>View as Markdown</span></button>' +
+                        '<button data-menu="ask">' + ic('sparkle', 'text-[15px]') + '<span>Open in Assistant</span></button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="prose mt-7">' + data.body + '</div>' +
+        '</section>';
+
+    document.querySelectorAll('.navitem').forEach(b => b.classList.toggle('active', b.dataset.goto === id));
+    const tabOwner = { extraction: 'docs', detection: 'docs', checksums: 'docs', ner: 'docs', limits: 'docs', authentication: 'docs', parameters: 'docs', errors: 'docs', responses: 'docs', versioning: 'docs', changelog: 'docs', docker: 'cli', batch: 'cli', playground: 'api', cookbook: 'cookbook' };
+    const activeTab = tabOwner[id] || id;
+    document.querySelectorAll('.tablink').forEach(t => t.classList.toggle('active', t.dataset.goto === activeTab));
+
+    renderToc(data.toc);
+    bindDynamic();
+    paintIcons();
+    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderToc(items) {
+    document.getElementById('toc').innerHTML = (items || []).map(t =>
+        '<a href="#' + t.id + '" data-toc="' + t.id + '" class="' + (t.level ? 'sub ' : '') + (t.active ? 'active' : '') + '">' + t.label + '</a>'
+    ).join('');
+    document.querySelectorAll('[data-toc]').forEach(a => {
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('[data-toc]').forEach(x => x.classList.remove('active'));
+            a.classList.add('active');
+            const t = document.getElementById(a.dataset.toc);
+            if (t) t.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+}
+
+/* ---------- dynamic bindings per section ---------- */
+function bindDynamic() {
+    document.querySelectorAll('#content .copy-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(window.location.href).catch(() => {});
+            const label = btn.querySelector('span');
+            if (label) { const p = label.textContent; label.textContent = 'Copied!'; setTimeout(() => label.textContent = p, 1400); }
+        });
+    });
+
+    document.querySelectorAll('.cb-copy').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const fig = btn.closest('.codeblock');
+            navigator.clipboard.writeText(decodeURIComponent(fig.dataset.code || '')).catch(() => {});
+            const prev = btn.innerHTML;
+            btn.innerHTML = ic('check', 'text-[15px]');
+            paintIcons();
+            setTimeout(() => { btn.innerHTML = prev; }, 1400);
+        });
+    });
+
+    const menuBtn = document.getElementById('copy-menu-btn');
+    const menu = document.getElementById('copy-menu');
+    if (menuBtn && menu) {
+        menuBtn.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+        menu.querySelectorAll('[data-menu]').forEach(b => b.addEventListener('click', () => { menu.classList.add('hidden'); flashCopy(b); }));
+    }
+
+    const pgRun = document.getElementById('pg-run');
+    if (pgRun) {
+        let mapping = {};
+        pgRun.addEventListener('click', () => {
+            const text = document.getElementById('pg-input').value;
+            if (!text.trim()) return;
+            mapping = {};
+            let out = text, n = 0;
+            const sub = (re, label) => { out = out.replace(re, (m) => { n++; const ph = '[' + label + '_' + n + ']'; mapping[ph] = m; return ph; }); };
+            sub(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, 'EMAIL');
+            sub(/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){1,6}(?:[ ]?[A-Z0-9]{1,4})?\b/g, 'IBAN');
+            sub(/\b(?:\d[ -]?){13,16}\b/g, 'CARD');
+            sub(/\b\d{3}-\d{2}-\d{4}\b/g, 'SSN');
+            sub(/(?:\+1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}/g, 'PHONE');
+            sub(/\b(?:\d{4}-\d{2}-\d{2}|(?:0[1-9]|1[0-2])\/(?:0[1-9]|[12]\d|3[01])\/\d{4})\b/g, 'DATE');
+            sub(/\b\d{5}(?:-\d{4})?\b/g, 'ZIP');
+            out = out.replace(/\b([A-Z][a-z]+)\s([A-Z][a-z]+)\b/g, (m) => { n++; const ph = '[PERSON_' + n + ']'; mapping[ph] = m; return ph; });
+            out = out.replace(/\b([A-Z][A-Za-z]+(?:\s[A-Z][A-Za-z]+)*)\s(Inc|Corp|LLC|Ltd|GmbH|Labs|Group)\b/g, (m) => { n++; const ph = '[ORG_' + n + ']'; mapping[ph] = m; return ph; });
+            document.getElementById('pg-output').textContent = out;
+            document.getElementById('pg-count').textContent = n;
+            document.getElementById('pg-stats').classList.remove('hidden');
+            document.getElementById('pg-map').textContent = JSON.stringify(mapping, null, 2);
+            document.getElementById('pg-map-wrap').classList.remove('hidden');
+            document.getElementById('pg-restore').disabled = false;
+        });
+        document.getElementById('pg-restore').addEventListener('click', () => {
+            let t = document.getElementById('pg-output').textContent;
+            Object.entries(mapping).forEach(([k, v]) => { t = t.split(k).join(v); });
+            document.getElementById('pg-output').textContent = t;
+            document.getElementById('pg-restore').disabled = true;
+        });
+    }
+}
+
+function flashCopy(btn) {
+    const label = btn.querySelector('span');
+    const prev = label.textContent;
+    label.textContent = 'Copied!';
+    navigator.clipboard.writeText(window.location.href).catch(() => {});
+    setTimeout(() => { label.textContent = prev; }, 1400);
+}
+
+/* ---------- global copy-link (TOC) ---------- */
+document.querySelectorAll('.copy-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(window.location.href).catch(() => {});
+        const label = btn.querySelector('span');
+        if (label) { const p = label.textContent; label.textContent = 'Copied!'; setTimeout(() => label.textContent = p, 1400); }
+    });
 });
 
-const result = await response.json();
-console.log(result.redacted_text);
-// Output: "Contract between [PERSON_1] ([EMAIL_1]) and [ORG_1]."`,
+/* ---------- navigation ---------- */
+document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-goto]');
+    if (t) { e.preventDefault(); renderSection(t.dataset.goto); return; }
+    const menu = document.getElementById('copy-menu');
+    if (menu && !menu.classList.contains('hidden') && !e.target.closest('#copy-menu-btn')) menu.classList.add('hidden');
+});
 
-            mcp: `{
-  "mcpServers": {
-    "anonshield": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "-v", "/home/me/docs:/data:ro",
-        "ghcr.io/seddzz/anonymizer",
-        "python", "-m", "anonymizer.mcp"
-      ]
-    }
-  }
-}`
-        };
+/* ---------- search ---------- */
+const SEARCH_INDEX = Object.entries(CONTENT).map(([id, c]) => ({ id, title: c.title, crumb: c.crumb, text: (c.title + ' ' + c.sub + ' ' + c.crumb).toLowerCase() }));
+const searchModal = document.getElementById('search-modal');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+function openSearch() { searchModal.classList.remove('hidden'); searchModal.classList.add('flex'); searchInput.value = ''; renderResults(''); searchInput.focus(); }
+function closeSearch() { searchModal.classList.add('hidden'); searchModal.classList.remove('flex'); }
+function renderResults(q) {
+    const term = q.trim().toLowerCase();
+    const hits = SEARCH_INDEX.filter(i => !term || i.text.includes(term));
+    if (!hits.length) { searchResults.innerHTML = '<div class="text-inkdim p-3 text-center text-xs">No matches for "' + q + '"</div>'; return; }
+    searchResults.innerHTML = hits.map(h =>
+        '<button data-goto="' + h.id + '" class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-surface flex items-center justify-between gap-3">' +
+        '<span><span class="block text-ink text-sm">' + h.title + '</span><span class="block text-xs text-inkdim mt-0.5">' + h.crumb + '</span></span>' +
+        ic('chevron', 'text-[15px]') + '</button>'
+    ).join('');
+    searchResults.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { closeSearch(); renderSection(b.dataset.goto); }));
+    paintIcons();
+}
+document.getElementById('search-btn').addEventListener('click', openSearch);
+document.getElementById('search-close').addEventListener('click', closeSearch);
+searchModal.addEventListener('click', (e) => { if (e.target === searchModal) closeSearch(); });
+searchInput.addEventListener('input', (e) => renderResults(e.target.value));
+document.getElementById('assistant-btn').addEventListener('click', () => document.getElementById('ask-input').focus());
+document.getElementById('ask-send').addEventListener('click', () => { const i = document.getElementById('ask-input'); if (i.value.trim()) i.value = ''; });
 
-        // Switch Code Language Tab
-        function switchCodeLang(lang) {
-            ['python', 'curl', 'ts', 'mcp'].forEach(l => {
-                const btn = document.getElementById(`code-btn-${l}`);
-                if (l === lang) {
-                    btn.className = "px-2.5 py-1 rounded bg-slate-800 text-brand-400 font-semibold transition-colors";
-                } else {
-                    btn.className = "px-2.5 py-1 rounded hover:text-white text-slate-400 transition-colors";
-                }
-            });
-            document.getElementById('code-display').textContent = codeSnippets[lang];
-        }
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); document.getElementById('ask-input').focus(); }
+    if (e.key === 'Escape') closeSearch();
+});
 
-        // Switch Active Content Section
-        function switchSection(sectionId) {
-            const sections = ['quickstart', 'playground', 'rest-api', 'cli-tool', 'mcp-agent'];
-            
-            // Highlight Left Nav
-            sections.forEach(s => {
-                const navBtn = document.getElementById(`nav-${s}`);
-                if (navBtn) {
-                    if (s === sectionId) {
-                        navBtn.className = "active-nav w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 font-medium transition-colors";
-                    } else {
-                        navBtn.className = "w-full text-left px-2.5 py-1.5 rounded-lg flex items-center gap-2.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors";
-                    }
-                }
-            });
-
-            // Scroll to section smoothly
-            const target = document.getElementById(`section-${sectionId}`);
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-
-        function switchTab(tabId) {
-            ['docs', 'api', 'cli', 'mcp', 'playground'].forEach(t => {
-                const tab = document.getElementById(`tab-${t}`);
-                if (tab) {
-                    if (t === tabId) {
-                        tab.className = "tab-active py-2.5 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap";
-                    } else {
-                        tab.className = "text-slate-400 hover:text-slate-200 py-2.5 flex items-center gap-2 border-b-2 border-transparent transition-colors whitespace-nowrap";
-                    }
-                }
-            });
-
-            const mapping = {
-                docs: 'quickstart',
-                api: 'rest-api',
-                cli: 'cli-tool',
-                mcp: 'mcp-agent',
-                playground: 'playground'
-            };
-            if (mapping[tabId]) switchSection(mapping[tabId]);
-        }
-
-        // Copy Code Snippet
-        function copyCodeSnippet() {
-            const codeText = document.getElementById('code-display').textContent;
-            navigator.clipboard.writeText(codeText);
-            const status = document.getElementById('copy-code-status');
-            status.textContent = "Copied!";
-            status.classList.add("text-brand-400");
-            setTimeout(() => {
-                status.textContent = "Copy";
-                status.classList.remove("text-brand-400");
-            }, 2000);
-        }
-
-        // Copy Page Link
-        function copyCurrentPage() {
-            navigator.clipboard.writeText(window.location.href);
-            const status = document.getElementById('copy-page-text');
-            status.textContent = "Link Copied!";
-            setTimeout(() => {
-                status.textContent = "Copy link";
-            }, 2000);
-        }
-
-        // Search Modal Handling (Ctrl+K)
-        const searchModal = document.getElementById('search-modal');
-        const searchInput = document.getElementById('search-input');
-        const searchTrigger = document.getElementById('search-trigger-btn');
-
-        function toggleSearchModal(show) {
-            if (show) {
-                searchModal.classList.remove('hidden');
-                searchInput.focus();
-            } else {
-                searchModal.classList.add('hidden');
-            }
-        }
-
-        searchTrigger.addEventListener('click', () => toggleSearchModal(true));
-
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                toggleSearchModal(true);
-            }
-            if (e.key === 'Escape') {
-                toggleSearchModal(false);
-            }
-        });
-
-        // LIVE PLAYGROUND SIMULATOR LOGIC
-        let lastMapping = {};
-        let originalTextStored = "";
-
-        function runPlaygroundAnonymize() {
-            const text = document.getElementById('playground-input').value;
-            if (!text.trim()) return;
-
-            originalTextStored = text;
-            lastMapping = {};
-            let redacted = text;
-            let entityCount = 0;
-
-            // 1. Email Replacement
-            redacted = redacted.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, (match) => {
-                entityCount++;
-                const placeholder = `[EMAIL_${entityCount}]`;
-                lastMapping[placeholder] = match;
-                return placeholder;
-            });
-
-            // 2. Phone Replacement
-            redacted = redacted.replace(/(?:\+1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}/g, (match) => {
-                entityCount++;
-                const placeholder = `[PHONE_${entityCount}]`;
-                lastMapping[placeholder] = match;
-                return placeholder;
-            });
-
-            // 3. IBAN Replacement
-            redacted = redacted.replace(/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){1,6}(?:[ ]?[A-Z0-9]{1,4})\b/g, (match) => {
-                entityCount++;
-                const placeholder = `[IBAN_${entityCount}]`;
-                lastMapping[placeholder] = match;
-                return placeholder;
-            });
-
-            // 4. Date Replacement
-            redacted = redacted.replace(/(?:0[1-9]|1[0-2])\/(?:0[1-9]|[12]\d|3[01])\/\d{4}/g, (match) => {
-                entityCount++;
-                const placeholder = `[DATE_${entityCount}]`;
-                lastMapping[placeholder] = match;
-                return placeholder;
-            });
-
-            // 5. ZIP Replacement
-            redacted = redacted.replace(/\b\d{5}\b/g, (match) => {
-                entityCount++;
-                const placeholder = `[ZIP_${entityCount}]`;
-                lastMapping[placeholder] = match;
-                return placeholder;
-            });
-
-            // 6. Person/Org Replacements (John Doe, Acme Corp)
-            if (redacted.includes("John Doe")) {
-                entityCount++;
-                lastMapping["[PERSON_1]"] = "John Doe";
-                redacted = redacted.replace(/John Doe/g, "[PERSON_1]");
-            }
-            if (redacted.includes("Acme Corp")) {
-                entityCount++;
-                lastMapping["[ORG_1]"] = "Acme Corp";
-                redacted = redacted.replace(/Acme Corp/g, "[ORG_1]");
-            }
-
-            // Display Results
-            document.getElementById('playground-output').textContent = redacted;
-            document.getElementById('stat-count').textContent = entityCount;
-            document.getElementById('detection-stats').classList.remove('hidden');
-
-            // Display Mapping JSON
-            document.getElementById('playground-mapping').textContent = JSON.stringify(lastMapping, null, 2);
-            document.getElementById('mapping-container').classList.remove('hidden');
-
-            // Enable Restore Button
-            document.getElementById('btn-restore').disabled = false;
-        }
-
-        function runPlaygroundRestore() {
-            let text = document.getElementById('playground-output').textContent;
-            for (const [placeholder, original] of Object.entries(lastMapping)) {
-                text = text.replaceAll(placeholder, original);
-            }
-            document.getElementById('playground-output').textContent = text;
-            document.getElementById('btn-restore').disabled = true;
-        }
-    </script>
+/* ---------- boot ---------- */
+paintIcons();
+const initial = (location.hash || '').replace('#', '');
+renderSection(CONTENT[initial] ? initial : 'api');
+</script>
 </body>
 </html>
