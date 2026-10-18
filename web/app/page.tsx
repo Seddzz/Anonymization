@@ -22,15 +22,15 @@ export default function HomePage() {
               details and identifiers locally, redact them with placeholders or fake values, and
               reverse the change when you need to.
             </p>
-            <div className="hero-actions">
-              <Link className="btn btn-accent" href="/docs">
-                Read the docs
-                <ArrowRight size={16} />
-              </Link>
-              <Link className="btn" href="/try">
-                Try it in the browser
-              </Link>
-            </div>
+          <div className="hero-actions">
+            <Link className="btn btn-accent" href="/docs">
+              Read the docs
+              <ArrowRight size={16} />
+            </Link>
+            <a className="btn" href="https://github.com/Seddzz/Nemo" target="_blank" rel="noreferrer">
+              Get it on GitHub
+            </a>
+          </div>
           </div>
           <RedactionPreview />
         </section>

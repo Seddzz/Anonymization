@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/docs", label: "Docs" },
-  { href: "/try", label: "Test" },
-];
+const LINKS = [{ href: "/docs", label: "Docs" }];
 
 function GitHubMark() {
   return (

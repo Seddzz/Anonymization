@@ -94,7 +94,7 @@
     {
       "id": "cli",
       "title": "CLI usage",
-      "text": "The anon command wraps the same engine. anon detect FILE lists entities. anon anonymize FILE -o OUT [--strategy fake] writes redacted text plus an OUT.mapping.json sidecar. anon restore FILE --mapping OUT.mapping.json -o OUT reverses it. anon version prints the version. PDFs are supported when they have a text layer."
+      "text": "The CLI console is the one terminal home: run anon (or the nemo alias) with no arguments to open it (anonymize, detect, restore, plus agent-setup and engine-quickstart guides; exit with 6). Scripted use: anon detect FILE lists entities; anon anonymize FILE -o OUT [--strategy fake] [--mapping|--no-mapping] writes redacted output, and a PDF input produces a redacted PDF with placeholder stamps in place (--ner/--no-ner toggles the transformer pass); -o *.txt requires a text input."
     },
     {
       "id": "docker",
@@ -104,7 +104,7 @@
     {
       "id": "mcp",
       "title": "MCP server",
-      "text": "The MCP server exposes three tools: detect(text), anonymize(text, strategy) and restore(mapping_id, redacted). Start it with python -m anonymizer.mcp_server over stdio. Register it in Claude Desktop or Cursor via an mcpServers entry whose command is python and args are -m anonymizer.mcp_server."
+      "text": "The MCP server exposes four tools: detect(text, ner), anonymize(text, strategy, ner), restore(mapping_id, redacted) and anonymize_pdf(input_path, strategy, ner, output_path, include_mapping) which writes a redacted PDF next to the original with placeholder stamps and needs no mapping by default. Start it with python -m anonymizer.mcp_server over stdio. Register it in Claude Code, Codex or Cursor via an mcpServers entry whose command is python and args are -m anonymizer.mcp_server. The console's agent-setup guide prints these snippets."
     },
     {
       "id": "evaluation",
@@ -114,12 +114,12 @@
     {
       "id": "limitations",
       "title": "Limitations",
-      "text": "Known limitations: NER is capitalization-sensitive and misses lowercase names; long documents are not windowed yet; regex formats target US conventions; the REST API accepts text only (PDF extraction is CLI-only); fake surrogates can collide on restore; mappings are in-memory with a 900-second TTL; and there is no authentication or rate limiting in this build."
+      "text": "Known limitations: NER is capitalization-sensitive and misses lowercase names; long documents are not windowed yet; regex formats target US conventions; PDF redaction needs a real text layer (scanned/image-only PDFs are rejected); redactions only remove electronic text versions and visible marks from PDFs; fake surrogates can collide on restore; mappings are in-memory with a 900-second TTL; and there is no authentication or rate limiting in this build."
     },
     {
       "id": "deployment",
       "title": "Deployment",
-      "text": "The docs and tester are a Next.js app deployed on Vercel. The FastAPI backend cannot run on Vercel serverless because CPU PyTorch exceeds the function size limit, so it runs as the Docker image on a container host such as Render, Railway, Fly.io or Hugging Face Spaces. The frontend calls it via NEXT_PUBLIC_API_URL, and the backend allows the frontend origin through ANONYMIZER_CORS_ORIGINS."
+      "text": "Nemo is local-first. The engine runs on the user machine via the CLI console (anon or nemo), uvicorn anonymizer.api or docker compose up --build. The Next.js docs site deploys to Vercel with root directory web and only hosts documentation and the Groq-backed assistant, so it never sees your documents. The FastAPI backend cannot run on Vercel serverless because CPU PyTorch exceeds the function size limit; self-host it on Render, Railway, Fly.io or Hugging Face Spaces if you want a remote API."
     }
   ]
 }

@@ -120,7 +120,7 @@ def _guide_engine() -> None:
     typer.echo("")
     typer.echo(_paint("  Swagger UI", DIM) + "  →  http://localhost:8000/docs")
     typer.echo(_paint("  Health", DIM) + "     →  http://localhost:8000/health")
-    typer.echo(_paint("  Playground", DIM) + "  →  http://localhost:3000/try")
+    typer.echo(_paint("  Docs + assistant", DIM) + "  →  http://localhost:3000")
     _header("Homebrew docs: `cd web && npm run dev` for the site that talks to the engine")
 
 

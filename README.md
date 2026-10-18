@@ -15,7 +15,7 @@
 - **MCP server** — Model Context Protocol tools so AI agents (Claude Desktop, Cursor, …) can redact text mid-conversation.
 - **Reversible redaction** — PII becomes stable placeholders (`[PERSON_1]`, `[IBAN_1]`) or realistic fakes, and the original can be restored from a short-lived mapping.
 - **Local-first privacy** — detection runs on your machine; no request ever leaves your infrastructure.
-- **Docs site** — the `web/` folder ships a Next.js docs/playground site (deployable on Vercel) that connects to your local engine.
+- **Docs site** — the `web/` folder ships a Next.js docs site with a RAG assistant (deployable on Vercel); the engine and your data stay on your machine.
 
 ## Requirements
 
