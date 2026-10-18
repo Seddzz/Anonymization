@@ -11,14 +11,18 @@ export function Assistant() {
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const busy = Boolean(messages.length || loading || error);
+  const open = focused || busy;
 
   async function send() {
     const question = input.trim();
-    if (!question || loading) return;
+    if (!question || loading) {
+      inputRef.current?.focus();
+      return;
+    }
     const next = [...messages, { role: "user" as const, content: question }];
     setMessages(next);
     setInput("");
@@ -41,32 +45,11 @@ export function Assistant() {
     }
   }
 
-  function expand() {
-    setOpen(true);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }
-
-  if (!open && !busy) {
-    return (
-      <div className="assistant-dock">
-        <button type="button" className="assistant-pill" onClick={expand} aria-label="Ask Nemo">
-          <span className="assistant-orb" aria-hidden="true">
-            <span className="material-symbols-outlined">robot_2</span>
-          </span>
-          <span className="assistant-pill-label">Ask Nemo</span>
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className={`assistant-dock ${busy ? "has-response" : ""}`}>
+    <div className={`assistant-dock ${open ? "is-open" : ""} ${busy ? "has-response" : ""}`}>
       {busy ? (
         <div className="assistant-response" role="status" aria-live="polite">
           <div className="assistant-head">
-            <span className="assistant-orb" aria-hidden="true">
-              <span className="material-symbols-outlined">robot_2</span>
-            </span>
             <span className="assistant-title">Assistant</span>
           </div>
           <div className="assistant-log">
@@ -94,27 +77,31 @@ export function Assistant() {
         </div>
       ) : null}
       <div className="assistant-input">
-        <input
-          id="assistant-input"
-          ref={inputRef}
-          className="input"
-          value={input}
-          placeholder="Ask Nemo…"
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") send();
-          }}
-          aria-label="Question"
-        />
         <button
           type="button"
-          className="assistant-send"
+          className="assistant-orb"
           onClick={send}
           disabled={loading}
           aria-label="Send question"
         >
           <span className="material-symbols-outlined">arrow_upward</span>
         </button>
+        <input
+          id="assistant-input"
+          ref={inputRef}
+          className="input"
+          value={input}
+          placeholder="Ask Nemo"
+          onChange={(event) => setInput(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            if (!input.trim() && !busy) setFocused(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") send();
+          }}
+          aria-label="Question"
+        />
       </div>
     </div>
   );

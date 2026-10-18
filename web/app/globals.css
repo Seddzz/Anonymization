@@ -594,46 +594,45 @@ table.api td:first-child {
 .entity strong {
   color: var(--accent);
 }
-.assistant-pill {
-  pointer-events: auto;
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 48px;
-  padding: 5px 22px 5px 6px;
-  border: 0;
-  border-radius: 9999px;
-  background: var(--accent);
-  color: #03080a;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
-  transition: filter 0.15s, transform 0.15s;
-  animation: assistant-rise 0.28s ease-out both;
-}
-.assistant-pill:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-}
-.assistant-pill-label {
-  white-space: nowrap;
-}
 .assistant-orb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
   border-radius: 50%;
-  background: var(--bg);
-  color: var(--accent);
+  background: var(--accent);
+  color: #03080a;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), filter 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .assistant-orb .material-symbols-outlined {
   font-size: 22px;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.assistant-orb:hover {
+  transform: translateY(-2px) scale(1.06);
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 6px rgba(200, 255, 0, 0.12);
+}
+.assistant-orb:hover .material-symbols-outlined {
+  transform: translateY(-1px);
+}
+.assistant-orb:active {
+  transform: translateY(0) scale(0.92);
+}
+.assistant-orb:focus-visible {
+  outline: none;
+}
+.assistant-orb:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 .assistant-dock {
   position: fixed !important;
@@ -643,6 +642,7 @@ table.api td:first-child {
   z-index: 50;
   display: flex;
   flex-direction: column;
+  align-items: center;
   width: min(460px, calc(100vw - 32px));
   pointer-events: none;
   isolation: isolate;
@@ -655,6 +655,7 @@ table.api td:first-child {
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
 }
 .assistant-response {
+  width: 100%;
   max-height: min(440px, calc(100vh - 150px));
   overflow: hidden;
   border-radius: 18px 18px 0 0;
@@ -666,13 +667,6 @@ table.api td:first-child {
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-}
-.assistant-head .assistant-orb {
-  width: 30px;
-  height: 30px;
-}
-.assistant-head .assistant-orb .material-symbols-outlined {
-  font-size: 19px;
 }
 .assistant-title {
   flex: 1;
@@ -731,10 +725,21 @@ table.api td:first-child {
 .assistant-input {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: 240px;
+  max-width: 100%;
   min-height: 52px;
-  padding: 7px 7px 7px 18px;
+  padding: 6px 18px 6px 6px;
   border-radius: 9999px;
+  transition: width 0.36s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease,
+    box-shadow 0.2s ease;
+}
+.assistant-dock.is-open .assistant-input {
+  width: 100%;
+}
+.assistant-input:hover {
+  border-color: var(--inkdim);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.5);
 }
 .has-response .assistant-input {
   border-top-color: var(--surface2);
@@ -749,36 +754,6 @@ table.api td:first-child {
 }
 .assistant-input .input:focus {
   border: 0;
-}
-.assistant-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  padding: 0;
-  border: 0;
-  outline: none;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #03080a;
-  transition: background-color 0.15s, transform 0.15s, filter 0.15s;
-}
-.assistant-send:hover {
-  filter: brightness(1.06);
-  transform: translateY(-1px);
-}
-.assistant-send .material-symbols-outlined {
-  font-size: 20px;
-}
-.assistant-send:focus-visible {
-  outline: none;
-}
-.assistant-send:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
 }
 @keyframes assistant-rise {
   from {
