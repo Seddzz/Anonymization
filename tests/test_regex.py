@@ -1,7 +1,7 @@
 """Tests for regex detectors - 5 positive + 5 negative per pattern."""
 
 from anonymizer.detect import validate_entity_offsets
-from anonymizer.detectors.regex import (
+from anonymizer.detectors.regex_detector import (
     date_detector,
     detect_all_regex,
     email_detector,
