@@ -1,14 +1,44 @@
 "use client";
 
-import { Loader2, RotateCcw, ScanSearch, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Plug, PlugZap, RotateCcw, ScanSearch, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
-import { API_URL, anonymizeText, detectText, restoreText } from "@/lib/api";
+import { API_URL, anonymizeText, detectText, healthCheck, restoreText } from "@/lib/api";
 import type { Entity, Strategy } from "@/lib/api";
 
 const SAMPLE = `Contract between John Doe (john.doe@acme.org, phone (555) 123-4567) and Acme Corp. Pay to IBAN GB29NWBK60161331926819 on 03/15/2024 at ZIP 90210.`;
 
 type Busy = "detect" | "anonymize" | "restore" | null;
+type Status = "checking" | "offline" | "online";
+
+function OfflineGate({ onRetry, checking }: { onRetry: () => void; checking: boolean }) {
+  return (
+    <div className="offline">
+      <div className="offline-head">
+        <Plug className="icon" size={18} />
+        <h3>Connect your local engine</h3>
+      </div>
+      <p className="offline-text">
+        Nemo runs entirely on your machine — this playground talks to the API at{" "}
+        <span className="mono">{API_URL}</span>. Start the engine and the page connects
+        automatically; nothing you paste here ever leaves your computer.
+      </p>
+      <div className="offline-steps">
+        <div className="offline-cmd">docker compose up --build</div>
+        <div className="offline-cmd">
+          .venv\Scripts\uvicorn anonymizer.api:app --port 8000
+        </div>
+      </div>
+      <div className="tester-row">
+        <button type="button" className="btn btn-accent" onClick={onRetry} disabled={checking}>
+          {checking ? <Loader2 className="icon spin" size={16} /> : <PlugZap className="icon" size={16} />}
+          {checking ? "Checking…" : "Retry connection"}
+        </button>
+        <span className="offline-note">Auto-retries every 5 seconds.</span>
+      </div>
+    </div>
+  );
+}
 
 export function Tester() {
   const [text, setText] = useState(SAMPLE);
@@ -19,6 +49,23 @@ export function Tester() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>("checking");
+
+  const check = useCallback(async () => {
+    const healthy = await healthCheck();
+    setStatus(healthy ? "online" : "offline");
+    return healthy;
+  }, []);
+
+  useEffect(() => {
+    void check();
+  }, [check]);
+
+  useEffect(() => {
+    if (status !== "offline") return;
+    const timer = setInterval(() => void check(), 5000);
+    return () => clearInterval(timer);
+  }, [status, check]);
 
   async function run(kind: Exclude<Busy, null>) {
     setBusy(kind);
@@ -46,8 +93,31 @@ export function Tester() {
     }
   }
 
+  if (status !== "online") {
+    return (
+      <div className="tester">
+        {status === "checking" ? (
+          <div className="msg assistant msg-loading">
+            <Loader2 className="icon spin" size={16} />
+            <span>Looking for the engine at {API_URL}…</span>
+          </div>
+        ) : (
+          <OfflineGate onRetry={() => void check()} checking={false} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="tester">
+      <div className="tester-row">
+        <span className="engine-pill">
+          <span className="engine-dot" />
+          Engine connected
+        </span>
+        <span className="offline-note mono">{API_URL}</span>
+      </div>
+
       <div>
         <div className="tester-label">Text to analyze</div>
         <textarea
@@ -153,10 +223,6 @@ export function Tester() {
           </span>
         </div>
       ) : null}
-
-      <p style={{ margin: 0, color: "var(--inkdim)", fontSize: 12 }}>
-        API: <span className="mono">{API_URL}</span>
-      </p>
     </div>
   );
 }
