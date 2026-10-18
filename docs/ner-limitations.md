@@ -103,7 +103,7 @@ tokens (`B-LOC`, `I-LOC`, `I-LOC`). We use `"simple"` so the span is emitted onc
 
 ## 5. Why this is fine for the MVP
 
-AnonShield is a **layered** system, not a single model:
+Nemo is a **layered** system, not a single model:
 
 | Layer | Catches | Nature |
 | --- | --- | --- |
