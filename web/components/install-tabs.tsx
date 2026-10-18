@@ -16,25 +16,25 @@ const TABS: Tab[] = [
     label: "pip",
     command:
       'pip install -e ".[dev]" --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple',
-    note: "Requires Python 3.11+. Run in your terminal at the project root directory.",
+    note: "Prerequisite: Clone repo first (`git clone ...`). Run this command inside the project root directory.",
   },
   {
     id: "uv",
     label: "uv",
     command: 'uv pip install -e ".[dev]"',
-    note: "Requires Python 3.11+ and Astral uv. Run in your terminal at the project root.",
+    note: "Prerequisite: Clone repo first (`git clone ...`). Run this command inside the project root directory.",
   },
   {
     id: "docker",
     label: "docker",
     command: "docker compose up --build",
-    note: "Requires Docker Desktop running. Spins up both FastAPI backend and Next.js frontend.",
+    note: "Prerequisite: Clone repo first. Requires Docker Desktop running. Spins up both backend and frontend.",
   },
   {
     id: "git",
     label: "git",
     command: "git clone https://github.com/Seddzz/Nemo.git",
-    note: "Clones the repository locally so you can inspect or modify code and run tests.",
+    note: "Step 1: Clone the repository to your local machine, then cd into the folder.",
   },
 ];
 
