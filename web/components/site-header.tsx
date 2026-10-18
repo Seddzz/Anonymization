@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Assistant } from "@/components/assistant";
+
 const LINKS = [
   { href: "/docs", label: "Docs" },
   { href: "/try", label: "Test" },
@@ -27,6 +29,7 @@ export function SiteHeader() {
           <a href="https://github.com/Seddzz/Anonymization" target="_blank" rel="noreferrer">
             GitHub
           </a>
+          <Assistant />
         </nav>
       </div>
     </header>
