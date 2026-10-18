@@ -71,7 +71,9 @@ def test_anonymize_pdf_writes_redacted_file(tmp_path):
 
     assert "[EMAIL_1]" in result["redacted_text"]
     assert "john.doe@acme.org" not in result["redacted_text"]
-    assert {"label": "EMAIL", "text": "john.doe@acme.org"} in result["found_entities"]
+    assert result["found"] == {"EMAIL": 1}
+    serialized = str(result)
+    assert "john.doe@acme.org" not in serialized
     assert result["stamped"] >= 1
     assert result["missed"] == 0
     assert "mapping" not in result
@@ -113,4 +115,4 @@ def test_call_tool_pdf_round_trip(tmp_path):
     assert result.is_error is False
     text = "".join(item.text for item in result.content)
     assert "[EMAIL_1]" in text
-    assert "a@b.com" not in text.split("found_entities")[0]
+    assert "a@b.com" not in text

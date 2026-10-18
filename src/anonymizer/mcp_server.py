@@ -79,8 +79,9 @@ def anonymize_pdf(
     """Redact PII in a local PDF: writes a redacted PDF next to the original
     and returns the redacted text, ready to paste into any LLM or agent turn.
 
+    Original values never appear in the response -- only per-label counts.
     The original document stays untouched on disk, so no mapping is needed;
-    pass ``include_mapping=True`` only if you want the value table returned.
+    pass include_mapping=True only if you want the value table returned.
     """
     path = Path(input_path).expanduser().resolve()
     if path.suffix.lower() != ".pdf":
@@ -100,10 +101,14 @@ def anonymize_pdf(
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_bytes(result.pdf_bytes)
 
+    counts: dict[str, int] = {}
+    for entity in entities:
+        counts[entity.label] = counts.get(entity.label, 0) + 1
+
     payload = {
         "redacted_pdf": str(destination),
         "redacted_text": result.redacted_text,
-        "found_entities": [{"label": entity.label, "text": entity.text} for entity in entities],
+        "found": counts,
         "stamped": result.applied,
         "missed": result.missed,
     }
