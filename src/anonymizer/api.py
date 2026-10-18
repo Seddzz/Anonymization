@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from anonymizer.anonymize import anonymize_text
 from anonymizer.detect import Entity
+from anonymizer.detectors import ALL_CHECKSUM_DETECTORS, ALL_REGEX_DETECTORS, NerDetector
 from anonymizer.engine import DetectionEngine
 from anonymizer.restore import restore_text
 from anonymizer.store import MappingStore
@@ -29,9 +30,26 @@ app.add_middleware(
 engine = DetectionEngine()
 store = MappingStore()
 
+_ner_detector: NerDetector | None = None
+_ner_engine: DetectionEngine | None = None
+
+
+def _engine_for(use_ner: bool) -> DetectionEngine:
+    """Return a cached engine, lazily building the NER one on first use."""
+    global _ner_detector, _ner_engine
+    if not use_ner:
+        return engine
+    if _ner_engine is None:
+        _ner_detector = NerDetector()
+        _ner_engine = DetectionEngine(
+            [*ALL_REGEX_DETECTORS, *ALL_CHECKSUM_DETECTORS, _ner_detector]
+        )
+    return _ner_engine
+
 
 class DetectRequest(BaseModel):
     text: str
+    ner: bool = False
 
 
 class EntityOut(BaseModel):
@@ -50,6 +68,7 @@ class DetectResponse(BaseModel):
 class AnonymizeRequest(BaseModel):
     text: str
     strategy: Literal["placeholder", "fake"] = "placeholder"
+    ner: bool = False
 
 
 class AnonymizeResponse(BaseModel):
@@ -89,13 +108,13 @@ def health() -> HealthResponse:
 
 @app.post("/detect", response_model=DetectResponse)
 def detect(request: DetectRequest) -> DetectResponse:
-    entities = engine.detect_all(request.text)
+    entities = _engine_for(request.ner).detect_all(request.text)
     return DetectResponse(entities=[_to_out(entity) for entity in entities])
 
 
 @app.post("/anonymize", response_model=AnonymizeResponse)
 def anonymize(request: AnonymizeRequest) -> AnonymizeResponse:
-    entities = engine.detect_all(request.text)
+    entities = _engine_for(request.ner).detect_all(request.text)
     redacted, mapping = anonymize_text(request.text, entities, strategy=request.strategy)
     mapping_id = store.save(mapping)
     return AnonymizeResponse(
