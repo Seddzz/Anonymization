@@ -134,6 +134,18 @@ curl -X POST http://localhost:8000/anonymize-file \
 - `/detect-file` works identically for detection only. Plain `.txt` uploads are accepted too, up to **10 MB**.
 - Scanned PDFs without a text layer return `422` — run OCR before sending them.
 
+**Get a redacted PDF back** (PII boxed out in place, layout preserved) with `-F "output=pdf"`:
+
+```bash
+curl -X POST http://localhost:8000/anonymize-file \
+  -F "file=@invoice.pdf" \
+  -F "strategy=placeholder" \
+  -F "output=pdf" \
+  -o invoice_redacted.pdf
+```
+
+Every detected value is replaced by a drawn token (`[EMAIL_1]`, `[IBAN_1]`, …) over the exact spot the original occupied — the PII is removed from the content stream, so copy/paste cannot recover it. The response carries `X-Mapping-Id` (use it with `/restore`), `X-Redacted-Entities`, and `X-Missed-Entities` (a rare entity split across a page break or in a decorative font may be skipped — check this header before trusting an anonymized document).
+
 Prefer no curl? Run the CLI inside the container against a mounted folder:
 
 ```bash

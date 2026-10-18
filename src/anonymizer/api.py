@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel
 
 from anonymizer.anonymize import anonymize_text
@@ -15,6 +15,7 @@ from anonymizer.detectors import ALL_CHECKSUM_DETECTORS, ALL_REGEX_DETECTORS, Ne
 from anonymizer.engine import DetectionEngine
 from anonymizer.exceptions import ScannedDocumentError
 from anonymizer.extract import extract_pdf
+from anonymizer.pdf_output import redact_pdf
 from anonymizer.restore import restore_text
 from anonymizer.store import MappingStore
 
@@ -125,8 +126,12 @@ def detect(request: DetectRequest) -> DetectResponse:
     return DetectResponse(entities=[_to_out(entity) for entity in entities])
 
 
-def _extract_upload_text(file: UploadFile) -> str:
-    """Extract .txt content or the PDF text layer of an uploaded document."""
+def _read_upload(file: UploadFile) -> tuple[str, Path | None]:
+    """Extract .txt content or the PDF text layer of an uploaded document.
+
+    Returns the document text plus the temp path for PDFs (needed for PDF
+    output; callers must unlink it).
+    """
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in _UPLOAD_SUFFIXES:
         raise HTTPException(
@@ -142,15 +147,18 @@ def _extract_upload_text(file: UploadFile) -> str:
             handle.write(data)
             temp_path = Path(handle.name)
         try:
-            try:
-                pages = extract_pdf(temp_path)
-            except ScannedDocumentError as exc:
-                raise HTTPException(status_code=422, detail=str(exc)) from exc
-            return "".join(page.text for page in pages)
-        finally:
+            pages = extract_pdf(temp_path)
+        except ScannedDocumentError as exc:
             temp_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except HTTPException:
+            raise
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+        return "".join(page.text for page in pages), temp_path
     try:
-        return data.decode("utf-8")
+        return data.decode("utf-8"), None
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="File is not valid UTF-8 text.") from exc
 
@@ -161,27 +169,58 @@ def detect_file(
     ner: bool = False,
 ) -> DetectResponse:
     """Detect entities in an uploaded .txt or .pdf document."""
-    text = _extract_upload_text(file)
-    entities = _engine_for(ner).detect_all(text)
-    return DetectResponse(entities=[_to_out(entity) for entity in entities])
+    text, temp_path = _read_upload(file)
+    try:
+        entities = _engine_for(ner).detect_all(text)
+        return DetectResponse(entities=[_to_out(entity) for entity in entities])
+    finally:
+        if temp_path:
+            temp_path.unlink(missing_ok=True)
 
 
-@app.post("/anonymize-file", response_model=AnonymizeResponse)
+@app.post("/anonymize-file")
 def anonymize_file(
     file: Annotated[UploadFile, File()],
     strategy: Literal["placeholder", "fake"] = "placeholder",
     ner: bool = False,
-) -> AnonymizeResponse:
-    """Anonymize an uploaded .txt or .pdf document; returns redacted text and mapping id."""
-    text = _extract_upload_text(file)
-    entities = _engine_for(ner).detect_all(text)
-    redacted, mapping = anonymize_text(text, entities, strategy=strategy)
-    mapping_id = store.save(mapping)
-    return AnonymizeResponse(
-        redacted=redacted,
-        mapping_id=mapping_id,
-        entities=[_to_out(entity) for entity in entities],
-    )
+    output: Literal["text", "pdf"] = "text",
+) -> Response:
+    """Anonymize an uploaded .txt or .pdf document.
+
+    ``output=text`` (default) returns the usual JSON with ``redacted``,
+    ``mapping_id`` and ``entities``. ``output=pdf`` streams a redacted PDF with
+    the PII boxed out in place; the mapping id is carried in ``X-Mapping-Id``.
+    """
+    text, temp_path = _read_upload(file)
+    try:
+        entities = _engine_for(ner).detect_all(text)
+        if output == "pdf":
+            if temp_path is None:
+                raise HTTPException(
+                    status_code=400, detail="PDF output requires a PDF upload."
+                )
+            result = redact_pdf(temp_path, entities, strategy=strategy)
+            mapping_id = store.save(result.mapping)
+            return Response(
+                content=result.pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "X-Mapping-Id": mapping_id,
+                    "X-Redacted-Entities": str(result.applied),
+                    "X-Missed-Entities": str(result.missed),
+                },
+            )
+
+        redacted, mapping = anonymize_text(text, entities, strategy=strategy)
+        mapping_id = store.save(mapping)
+        return AnonymizeResponse(
+            redacted=redacted,
+            mapping_id=mapping_id,
+            entities=[_to_out(entity) for entity in entities],
+        )
+    finally:
+        if temp_path:
+            temp_path.unlink(missing_ok=True)
 
 
 @app.post("/anonymize", response_model=AnonymizeResponse)

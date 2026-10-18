@@ -3,6 +3,43 @@ from anonymizer.detect import Entity, validate_entity_offsets
 from anonymizer.fakes import FakeGenerator
 
 
+def replacement_table(
+    entities: list[Entity],
+    strategy: str = "placeholder",
+    faker: FakeGenerator | None = None,
+) -> dict[tuple[str, str], str]:
+    """Compute the ``(label, original) -> replacement`` table shared by the
+    text pipeline and the PDF renderer so both produce identical tokens."""
+    if strategy not in ("placeholder", "fake"):
+        raise ValueError(f"unknown strategy: {strategy!r}")
+
+    replacement_by_key: dict[tuple[str, str], str] = {}
+
+    if strategy == "placeholder":
+        counters: dict[str, int] = {}
+        for entity in sorted(entities, key=lambda e: e.start):
+            key = (entity.label, entity.text)
+            if key in replacement_by_key:
+                continue
+            counters[entity.label] = counters.get(entity.label, 0) + 1
+            replacement = f"[{entity.label}_{counters[entity.label]}]"
+            replacement_by_key[key] = replacement
+    else:
+        generator = faker or FakeGenerator()
+        used: set[str] = set()
+        for entity in sorted(entities, key=lambda e: e.start):
+            key = (entity.label, entity.text)
+            if key in replacement_by_key:
+                continue
+            fake = generator.generate(entity.label)
+            while fake in used:
+                fake = generator.generate(entity.label)
+            used.add(fake)
+            replacement_by_key[key] = fake
+
+    return replacement_by_key
+
+
 def anonymize_text(
     text: str,
     entities: list[Entity],
@@ -23,36 +60,12 @@ def anonymize_text(
     ``entities`` must be non-overlapping (the DetectionEngine guarantees this).
     """
     validate_entity_offsets(text, entities)
+    replacement_by_key = replacement_table(entities, strategy=strategy, faker=faker)
 
-    if strategy not in ("placeholder", "fake"):
-        raise ValueError(f"unknown strategy: {strategy!r}")
-
-    replacement_by_key: dict[tuple[str, str], str] = {}
-    mapping: dict[str, str] = {}
-
-    if strategy == "placeholder":
-        counters: dict[str, int] = {}
-        for entity in sorted(entities, key=lambda e: e.start):
-            key = (entity.label, entity.text)
-            if key in replacement_by_key:
-                continue
-            counters[entity.label] = counters.get(entity.label, 0) + 1
-            replacement = f"[{entity.label}_{counters[entity.label]}]"
-            replacement_by_key[key] = replacement
-            mapping[replacement] = entity.text
-    else:
-        generator = faker or FakeGenerator()
-        used: set[str] = set()
-        for entity in sorted(entities, key=lambda e: e.start):
-            key = (entity.label, entity.text)
-            if key in replacement_by_key:
-                continue
-            fake = generator.generate(entity.label)
-            while fake in used:
-                fake = generator.generate(entity.label)
-            used.add(fake)
-            replacement_by_key[key] = fake
-            mapping[fake] = entity.text
+    mapping: dict[str, str] = {
+        replacement: original
+        for (label, original), replacement in replacement_by_key.items()
+    }
 
     # Splice right-to-left so earlier offsets stay valid while editing.
     redacted = text

@@ -189,3 +189,56 @@ def test_upload_rejects_scan_with_textless_page():
     doc.new_page()  # empty page: no text layer -> ScannedDocumentError
     response = _post_file("/anonymize-file", "scan.pdf", doc.tobytes())
     assert response.status_code == 422
+
+
+def test_anonymize_file_pdf_output_returns_redacted_pdf():
+    pdf = make_pdf("Invoice for John Doe. Contact john.doe@acme.org. Total EUR 4200.")
+    response = _post_file("/anonymize-file", "invoice.pdf", pdf, output="pdf")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.content.startswith(b"%PDF")
+    mapping_id = response.headers["x-mapping-id"]
+    assert len(mapping_id) > 0
+    assert response.headers["x-missed-entities"] == "0"
+
+    reopened = fitz.open(stream=response.content, filetype="pdf")
+    redacted_page_text = " ".join(page.get_text("text") for page in reopened)
+    assert "john.doe@acme.org" not in redacted_page_text
+    assert "[EMAIL_1]" in redacted_page_text
+
+
+def test_anonymize_file_pdf_output_restores_from_pdf_text_layer():
+    original_email = "john.doe@acme.org"
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), f"Email {original_email} for review.")
+    response = _post_file("/anonymize-file", "note.pdf", doc.tobytes(), output="pdf")
+    assert response.status_code == 200
+    mapping_id = response.headers["x-mapping-id"]
+
+    redacted_doc = fitz.open(stream=response.content, filetype="pdf")
+    redacted_text = " ".join(page.get_text("text") for page in redacted_doc)
+    assert "[EMAIL_1]" in redacted_text
+
+    restored = client.post(
+        "/restore",
+        json={"mapping_id": mapping_id, "redacted": redacted_text},
+    )
+    assert restored.status_code == 200
+    assert original_email in restored.json()["text"]
+
+
+def test_anonymize_file_txt_output_pdf_rejected():
+    response = _post_file("/anonymize-file", "note.txt", b"plain text", output="pdf")
+    assert response.status_code == 400
+    assert "PDF output" in response.json()["detail"]
+
+
+def test_anonymize_file_pdf_output_fake_strategy():
+    pdf = make_pdf("Contact john.doe@acme.org for the invoice.")
+    response = _post_file("/anonymize-file", "invoice.pdf", pdf, output="pdf", strategy="fake")
+    assert response.status_code == 200
+    reopened = fitz.open(stream=response.content, filetype="pdf")
+    text = " ".join(page.get_text("text") for page in reopened)
+    assert "john.doe@acme.org" not in text
+    assert "[EMAIL_1]" not in text  # fake strategy, not placeholders
