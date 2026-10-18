@@ -723,6 +723,14 @@ table.api td:first-child {
   color: var(--accent);
   border-color: var(--accent);
 }
+.install-note {
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--linesoft);
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--inksoft);
+  line-height: 1.5;
+}
 
 /* tester */
 .tester {

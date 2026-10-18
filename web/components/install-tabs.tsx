@@ -3,7 +3,12 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
-type Tab = { id: string; label: string; command: string };
+type Tab = {
+  id: string;
+  label: string;
+  command: string;
+  note: string;
+};
 
 const TABS: Tab[] = [
   {
@@ -11,10 +16,26 @@ const TABS: Tab[] = [
     label: "pip",
     command:
       'pip install -e ".[dev]" --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple',
+    note: "Requires Python 3.11+. Run in your terminal at the project root directory.",
   },
-  { id: "uv", label: "uv", command: "uv sync" },
-  { id: "docker", label: "docker", command: "docker compose up --build" },
-  { id: "git", label: "git", command: "git clone https://github.com/Seddzz/Nemo.git" },
+  {
+    id: "uv",
+    label: "uv",
+    command: 'uv pip install -e ".[dev]"',
+    note: "Requires Python 3.11+ and Astral uv. Run in your terminal at the project root.",
+  },
+  {
+    id: "docker",
+    label: "docker",
+    command: "docker compose up --build",
+    note: "Requires Docker Desktop running. Spins up both FastAPI backend and Next.js frontend.",
+  },
+  {
+    id: "git",
+    label: "git",
+    command: "git clone https://github.com/Seddzz/Nemo.git",
+    note: "Clones the repository locally so you can inspect or modify code and run tests.",
+  },
 ];
 
 export function InstallTabs() {
@@ -71,6 +92,9 @@ export function InstallTabs() {
           >
             {copied ? <Check size={15} /> : <Copy size={15} />}
           </button>
+        </div>
+        <div className="install-note">
+          <span>{current.note}</span>
         </div>
       </div>
     </section>
