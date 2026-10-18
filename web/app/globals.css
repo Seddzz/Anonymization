@@ -831,6 +831,7 @@ table.api td:first-child {
 }
 .assistant-input .input::placeholder {
   color: rgba(3, 8, 10, 0.55);
+  font-weight: 700;
 }
 .assistant-input .input:focus {
   border: 0;
