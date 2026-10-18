@@ -1,9 +1,93 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; at: number };
 type Source = { id: string; title: string };
+
+const SUGGESTIONS = [
+  "What is Nemo?",
+  "How do I anonymize a document?",
+  "How does the NER detector work?",
+  "Can I run it locally?",
+];
+
+function clock(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function inline(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+  let last = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) nodes.push(text.slice(last, match.index));
+    const token = match[0];
+    if (token.startsWith("**")) {
+      nodes.push(<strong key={key++}>{token.slice(2, -2)}</strong>);
+    } else {
+      nodes.push(<code key={key++}>{token.slice(1, -1)}</code>);
+    }
+    last = match.index + token.length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
+function renderMarkdown(text: string): ReactNode {
+  const lines = text.split(/\r?\n/);
+  const blocks: ReactNode[] = [];
+  let list: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let key = 0;
+
+  const flush = () => {
+    if (list.length === 0) return;
+    const items = list.map((item, index) => <li key={index}>{inline(item)}</li>);
+    blocks.push(
+      listType === "ol" ? (
+        <ol key={key++}>{items}</ol>
+      ) : (
+        <ul key={key++}>{items}</ul>
+      ),
+    );
+    list = [];
+    listType = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const heading = /^(#{1,4})\s+(.*)$/.exec(line);
+    const bullet = /^[-*•]\s+(.*)$/.exec(line);
+    const numbered = /^\d+[.)]\s+(.*)$/.exec(line);
+    if (heading) {
+      flush();
+      blocks.push(
+        <p key={key++} className={`md-h md-h${heading[1].length}`}>
+          {inline(heading[2])}
+        </p>,
+      );
+    } else if (bullet) {
+      if (listType === "ol") flush();
+      listType = "ul";
+      list.push(bullet[1]);
+    } else if (numbered) {
+      if (listType === "ul") flush();
+      listType = "ol";
+      list.push(numbered[1]);
+    } else if (line.trim() === "") {
+      flush();
+    } else {
+      flush();
+      blocks.push(<p key={key++}>{inline(line)}</p>);
+    }
+  }
+  flush();
+  return blocks;
+}
 
 export function Assistant() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -12,18 +96,21 @@ export function Assistant() {
   const [sources, setSources] = useState<Source[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
 
   const busy = Boolean(messages.length || loading || error);
-  const open = focused || busy;
+  const open = (focused || busy) && !minimized;
 
-  async function send() {
-    const question = input.trim();
+  async function send(text?: string) {
+    const question = (text ?? input).trim();
     if (!question || loading) {
       inputRef.current?.focus();
       return;
     }
-    const next = [...messages, { role: "user" as const, content: question }];
+    setMinimized(false);
+    const next = [...messages, { role: "user" as const, content: question, at: Date.now() }];
     setMessages(next);
     setInput("");
     setLoading(true);
@@ -32,11 +119,16 @@ export function Assistant() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({
+          messages: next.map(({ role, content }) => ({ role, content })),
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? `HTTP ${response.status}`);
-      setMessages([...next, { role: "assistant", content: data.reply }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply, at: Date.now() },
+      ]);
       setSources(data.sources ?? []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -45,22 +137,58 @@ export function Assistant() {
     }
   }
 
+  useEffect(() => {
+    if (open) logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading, open]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMinimized(true);
+        setFocused(false);
+        inputRef.current?.blur();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
-    <div className={`assistant-dock ${open ? "is-open" : ""} ${busy ? "has-response" : ""}`}>
-      {busy ? (
+    <div className={`assistant-dock ${open ? "is-open" : ""}`}>
+      {open ? (
         <div className="assistant-response" role="status" aria-live="polite">
-          <div className="assistant-head">
-            <span className="assistant-title">Assistant</span>
-          </div>
-          <div className="assistant-log">
+          <div className="assistant-log" ref={logRef}>
+            {messages.length === 0 && !loading && !error ? (
+              <div className="assistant-empty">
+                <span className="assistant-empty-title">NEMO</span>
+                <div className="assistant-suggestions">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className="assistant-suggestion"
+                      onClick={() => send(suggestion)}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {messages.map((message, index) => (
-              <div key={`${message.role}-${index}`} className={`msg ${message.role}`}>
-                {message.content}
+              <div key={index} className={`msg ${message.role}`}>
+                {message.role === "assistant" ? (
+                  <div className="msg-body">{renderMarkdown(message.content)}</div>
+                ) : (
+                  <span className="msg-body">{message.content}</span>
+                )}
+                <span className="msg-time">{clock(message.at)}</span>
               </div>
             ))}
             {loading ? (
-              <div className="msg assistant">
-                <span className="material-symbols-outlined spin">progress_activity</span> thinking…
+              <div className="msg assistant msg-loading">
+                <span className="material-symbols-outlined spin">progress_activity</span>
+                <span>thinking…</span>
               </div>
             ) : null}
             {error ? <div className="msg assistant assistant-error">{error}</div> : null}
@@ -80,7 +208,7 @@ export function Assistant() {
         <button
           type="button"
           className="assistant-orb"
-          onClick={send}
+          onClick={() => send()}
           disabled={loading}
           aria-label="Send question"
         >
@@ -93,7 +221,10 @@ export function Assistant() {
           value={input}
           placeholder="Ask Nemo"
           onChange={(event) => setInput(event.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            setMinimized(false);
+          }}
           onBlur={() => {
             if (!input.trim() && !busy) setFocused(false);
           }}
