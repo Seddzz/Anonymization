@@ -129,15 +129,15 @@ function renderMarkdown(text: string): ReactNode {
         </p>,
       );
     } else if (bullet) {
-      if (listType === "ol") flush();
+      if (listType && listType !== "ul") flush();
       listType = "ul";
       list.push(bullet[1]);
     } else if (numbered) {
-      if (listType === "ul") flush();
+      if (listType && listType !== "ol") flush();
       listType = "ol";
       list.push(numbered[1]);
     } else if (line.trim() === "") {
-      flush();
+      // Do not flush on blank lines so numbered list items separated by spaces stay in the same <ol>
     } else {
       flush();
       blocks.push(<p key={key++}>{inline(line)}</p>);

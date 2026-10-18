@@ -888,8 +888,8 @@ table.api td:first-child {
 }
 .assistant-response {
   pointer-events: auto;
-  width: 100%;
-  max-height: min(440px, calc(100vh - 150px));
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 140px));
   overflow: hidden;
   border-radius: 22px;
   background: var(--bg);
@@ -900,9 +900,9 @@ table.api td:first-child {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 18px;
+  padding: 20px;
   overflow-y: auto;
-  max-height: min(440px, calc(100vh - 150px));
+  max-height: min(520px, calc(100vh - 140px));
   overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
