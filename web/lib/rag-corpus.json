@@ -4,7 +4,7 @@
     {
       "id": "overview",
       "title": "Project overview",
-      "text": "Nemo is a local, API-first anonymizer for English documents. It detects personally identifiable information, redacts it, and can restore the exact originals. It has three detector families (regex, checksum, transformer NER), two redaction strategies (placeholder and fake), and is exposed through a REST API, the anon CLI, a Docker image and an MCP server."
+      "text": "Nemo is a local, API-first anonymizer for English documents. It detects personally identifiable information, redacts it, and can restore the exact originals. It has three detector families (regex, checksum, transformer NER), two redaction strategies (placeholder and fake), and is exposed through a REST API, the anon CLI and a Docker image,"
     },
     {
       "id": "scope",
@@ -94,17 +94,12 @@
     {
       "id": "cli",
       "title": "CLI usage",
-      "text": "The CLI console is the one terminal home: run anon (or the nemo alias) with no arguments to open it (anonymize, detect, restore, plus agent-setup and engine-quickstart guides; exit with 6). Scripted use: anon detect FILE lists entities; anon anonymize FILE -o OUT [--strategy fake] [--mapping|--no-mapping] writes redacted output, and a PDF input produces a redacted PDF with placeholder stamps in place (--ner/--no-ner toggles the transformer pass); -o *.txt requires a text input."
+      "text": "The CLI console is the one terminal home: run anon (or the nemo alias) with no arguments to open it (anonymize, detect, restore, plus an engine-quickstart guide; exit with 5). Scripted use: anon detect FILE lists entities; anon anonymize FILE -o OUT [--strategy fake] [--mapping|--no-mapping] writes redacted output, and a PDF input produces a redacted PDF with placeholder stamps in place (--ner/--no-ner toggles the transformer pass); -o *.txt requires a text input."
     },
     {
       "id": "docker",
       "title": "Docker usage",
       "text": "Build the CPU-only image with docker build -t anonymizer-api . and run it with docker run --rm -p 8000:8000 anonymizer-api, or docker compose up --build. The image installs PyTorch from the CPU index so it stays small and needs no GPU. The API listens on 0.0.0.0:8000."
-    },
-    {
-      "id": "mcp",
-      "title": "MCP server",
-      "text": "The MCP server exposes four tools: detect(text, ner), anonymize(text, strategy, ner), restore(mapping_id, redacted) and anonymize_pdf(input_path, strategy, ner, output_path, include_mapping) which writes a redacted PDF next to the original with placeholder stamps and needs no mapping by default. Start it with python -m anonymizer.mcp_server over stdio. Register it in Claude Code, Codex or Cursor via an mcpServers entry whose command is python and args are -m anonymizer.mcp_server. The console's agent-setup guide prints these snippets."
     },
     {
       "id": "evaluation",

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <em>API-first PII anonymization for English documents. Runs locally, reversible by design, usable from REST, CLI, MCP — or straight from an AI agent.</em>
+  <em>API-first PII anonymization for English documents. Runs locally, reversible by design, usable from REST or CLI.</em>
 </p>
 
 ---
@@ -12,7 +12,7 @@
 
 - **REST API** — FastAPI service with `/detect`, `/anonymize`, `/restore`, `/health` and an interactive Swagger UI at `http://localhost:8000/docs`.
 - **`anon` CLI** — detect, anonymize and restore `.txt` / `.pdf` files straight from your terminal.
-- **MCP server** — Model Context Protocol tools so AI agents (Claude Desktop, Cursor, …) can redact text mid-conversation.
+- **File workflow** — redact a document to a clean file, then use that file anywhere: paste it into a chat, load it in any agent, share it onward. PII never reaches a model.
 - **Reversible redaction** — PII becomes stable placeholders (`[PERSON_1]`, `[IBAN_1]`) or realistic fakes, and the original can be restored from a short-lived mapping.
 - **Local-first privacy** — detection runs on your machine; no request ever leaves your infrastructure.
 - **Docs site** — the `web/` folder ships a Next.js docs site with a RAG assistant (deployable on Vercel); the engine and your data stay on your machine.
@@ -166,13 +166,13 @@ Run `anon` (or the `nemo` alias) with **no arguments** to open the interactive c
 █   █  █████  █   █   ███
  nemo · 0.1.0 — everything runs on your machine
 
-  1) Anonymize a document    4) Agent (MCP) setup
-  2) Detect entities         5) Engine quickstart
-  3) Restore from mapping    6) Exit
+  1) Anonymize a document    4) Engine quickstart
+  2) Detect entities         5) Exit
+  3) Restore from mapping
 ```
 
 - **Anonymize** walks you through: path → NER? → strategy → mapping? (default **no** — you keep the original) → output name. A PDF input produces a redacted `.pdf` with placeholders stamped in place (layout preserved).
-- **Agent setup** and **Engine quickstart** print copy-paste registration and startup commands.
+- **Engine quickstart** prints copy-paste startup commands if you also want the REST API.
 - Existing venvs need one `pip install -e . --no-deps` to pick up the `nemo` alias.
 
 Scripted usage (same engine):
@@ -190,25 +190,9 @@ anon restore invoice_redacted.txt --mapping invoice_redacted.txt.mapping.json -o
 
 Keeping the original? Skip the sidecar — no mapping, no expiry, nothing else to manage.
 
-### Agents (MCP)
+### Using redacted files with agents
 
-Register the bundled MCP server with any local agent — the agent itself then works on files like a power user:
-
-- **Claude Code** (run in the project root, venv active):
-  ```bash
-  claude mcp add nemo -- python -m anonymizer.mcp_server
-  ```
-- **Codex CLI** — add to `~/.codex/config.toml`:
-  ```toml
-  [mcp_servers.nemo]
-  command = "python"                # or the absolute path to your .venv python
-  args = ["-m", "anonymizer.mcp_server"]
-  ```
-- **Cursor / any MCP client** — command `python`, args `["-m", "anonymizer.mcp_server"]`.
-
-Then it's a one-line command: *"Use the `anonymize_pdf` tool on `invoice.pdf`, then summarize the redacted text."* The agent gets a redacted PDF written next to the original, the redacted text to forward to any LLM, and per-entity counters — while **you keep the original**, so no mapping is required (pass `include_mapping=True` only if you ever want the value table). `ner=True` opts into the transformer pass.
-
-The `detect`, `anonymize` and `restore` MCP tools remain for plain-text chat flows (those do use the 15-minute mapping store).
+The CLI is the gateway: redact first, hand out the clean file only. The agent never sees the original document — its context only ever contains the redacted text.
 
 ---
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anonymizer"
 version = "0.1.0"
-description = "API-first anonymization service for English documents (REST, CLI, MCP)"
+description = "API-first anonymization service for English documents (REST, CLI)"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "Seddzz"}]
@@ -17,7 +17,6 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "python-multipart",
-    "mcp[cli]",
     "typer",
     "faker",
 ]

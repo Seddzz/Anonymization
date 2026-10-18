@@ -84,18 +84,6 @@ docker run --rm -p 8000:8000 anonymizer-api
 # Or with compose
 docker compose up --build`;
 
-const MCP = `# Start the MCP server over stdio
-python -m anonymizer.mcp_server`;
-
-const MCP_CONFIG = `{
-  "mcpServers": {
-    "anonymizer": {
-      "command": "python",
-      "args": ["-m", "anonymizer.mcp_server"]
-    }
-  }
-}`;
-
 const EVAL = `# Synthetic docs, regex + checksum detectors
 python -m eval.run -n 200 --seed 0
 
@@ -456,31 +444,6 @@ export const SECTIONS: DocSection[] = [
             Desktop first.
           </span>
         </div>
-      </>
-    ),
-  },
-  {
-    id: "mcp",
-    group: "Interfaces",
-    label: "MCP server",
-    title: "MCP server",
-    subtitle: "Give agents detection and redaction tools",
-    toc: [
-      { id: "tools", label: "Tools" },
-      { id: "config", label: "Configuration" },
-    ],
-    body: (
-      <>
-        <p>
-          The MCP server exposes three tools: <code>detect(text)</code>,{" "}
-          <code>anonymize(text, strategy)</code> and <code>restore(mapping_id, redacted)</code>. It
-          speaks stdio and uses the MCP 2.x server API.
-        </p>
-        <h2 id="tools">Tools</h2>
-        <CodeBlock label="Shell" code={MCP} />
-        <h2 id="config">Configuration</h2>
-        <p>Add the server to Claude Desktop, Cursor or any MCP client:</p>
-        <CodeBlock label="JSON" code={MCP_CONFIG} />
       </>
     ),
   },

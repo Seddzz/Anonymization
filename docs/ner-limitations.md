@@ -21,7 +21,7 @@ accepted for the first (MVP) version — plus what we deliberately defer.
 
 The model is wrapped behind the project-wide `Detector` protocol
 (`detect(text) -> list[Entity]`), so it is interchangeable with the regex and
-checksum detectors and can be replaced later without touching the API, CLI or MCP
+checksum detectors and can be replaced later without touching the API or CLI
 layers.
 
 ---

@@ -7,7 +7,7 @@ documents.
 
 ```
 Browser ──► Next.js on Vercel ──► /api/chat ──► Groq
-Terminal ──► CLI console / MCP ──► detection engine (local)
+Terminal ──► CLI console ──► detection engine (local)
 ```
 
 ## 1. Engine

@@ -124,7 +124,7 @@ def test_anonymize_pdf_output_requires_pdf_input(tmp_path):
 
 
 def test_console_opens_and_exits():
-    result = runner.invoke(app, [], input="6\n")
+    result = runner.invoke(app, [], input="5\n")
     assert result.exit_code == 0
     assert "Anonymize a document" in result.output
     assert "nemo" in result.output
@@ -133,7 +133,7 @@ def test_console_opens_and_exits():
 def test_console_anonymize_flow(tmp_path):
     document = tmp_path / "doc.txt"
     document.write_text("Email a@b.com", encoding="utf-8")
-    feed = f"1\n{document}\nn\n\nn\n\n6\n"
+    feed = f"1\n{document}\nn\n\nn\n\n5\n"
 
     result = runner.invoke(app, [], input=feed)
 
@@ -146,7 +146,7 @@ def test_console_anonymize_flow(tmp_path):
 
 def test_console_pdf_flow(tmp_path):
     document = make_pdf(tmp_path / "invoice.pdf", "Contact a@b.com now.")
-    feed = f"1\n{document}\nn\n\nn\n\n6\n"
+    feed = f"1\n{document}\nn\n\nn\n\n5\n"
 
     result = runner.invoke(app, [], input=feed)
 
@@ -158,15 +158,14 @@ def test_console_pdf_flow(tmp_path):
     assert "a@b.com" not in page_text
 
 
-def test_console_mcp_guide():
-    result = runner.invoke(app, [], input="4\n6\n")
+def test_console_engine_guide():
+    result = runner.invoke(app, [], input="4\n5\n")
     assert result.exit_code == 0
-    assert "claude mcp add" in result.output
-    assert "anonymize_pdf" in result.output
+    assert "uvicorn anonymizer.api:app" in result.output
 
 
 def test_console_unknown_option_recovers():
-    result = runner.invoke(app, [], input="99\n6\n")
+    result = runner.invoke(app, [], input="99\n5\n")
     assert result.exit_code == 0
     assert "Unknown option" in result.output
 
@@ -177,7 +176,7 @@ def test_console_restore_flow(tmp_path):
     document.write_text(original, encoding="utf-8")
     runner.invoke(app, ["anonymize", str(document), "-o", str(tmp_path / "out.txt")])
 
-    feed = f"3\n{tmp_path / 'out.txt'}\n{tmp_path / 'out.txt.mapping.json'}\n\n6\n"
+    feed = f"3\n{tmp_path / 'out.txt'}\n{tmp_path / 'out.txt.mapping.json'}\n\n5\n"
     result = runner.invoke(app, [], input=feed)
 
     assert result.exit_code == 0

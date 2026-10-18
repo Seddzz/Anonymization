@@ -92,25 +92,6 @@ def _flow_restore() -> None:
         typer.echo(_paint(f"  ✗ {exc}", LIME))
 
 
-def _guide_mcp() -> None:
-    _header("Agent (MCP) setup")
-    typer.echo("Point your local agent at the bundled MCP server:")
-    typer.echo("")
-    typer.echo(_paint("  Claude Code:", DIM))
-    typer.echo("    claude mcp add nemo -- python -m anonymizer.mcp_server")
-    typer.echo(_paint("  Codex CLI (add to ~/.codex/config.toml):", DIM))
-    typer.echo('    [mcp_servers.nemo]')
-    typer.echo('    command = "python"')
-    typer.echo('    args = ["-m", "anonymizer.mcp_server"]')
-    typer.echo(_paint("  Cursor / others:", DIM))
-    typer.echo('    command = "python", args = ["-m", "anonymizer.mcp_server"]')
-    typer.echo("")
-    typer.echo(_paint("  Tip: use this venv's python, e.g. .venv\\Scripts\\python (Windows).", DIM))
-    typer.echo(_paint("  Then, in the agent:", DIM))
-    typer.echo('    "Use the anonymize_pdf tool on invoice.pdf, then summarize the redacted text."')
-    typer.echo(_paint("  The redacted PDF lands next to the original — no mapping needed.", DIM))
-
-
 def _guide_engine() -> None:
     _header("Engine quickstart")
     typer.echo(_paint("  Python:", DIM))
@@ -128,8 +109,7 @@ _HANDLERS = {
     "1": lambda: (_header("Anonymize a document"), _flow_anonymize()),
     "2": lambda: (_header("Detect entities"), _flow_detect()),
     "3": lambda: (_header("Restore from mapping"), _flow_restore()),
-    "4": _guide_mcp,
-    "5": _guide_engine,
+    "4": _guide_engine,
 }
 
 
@@ -140,15 +120,15 @@ def run_console() -> None:
 
     while True:
         typer.echo("")
-        typer.echo(_paint("  1) Anonymize a document    4) Agent (MCP) setup", DIM))
-        typer.echo(_paint("  2) Detect entities         5) Engine quickstart", DIM))
-        typer.echo(_paint("  3) Restore from mapping    6) Exit", DIM))
+        typer.echo(_paint("  1) Anonymize a document    4) Engine quickstart", DIM))
+        typer.echo(_paint("  2) Detect entities         5) Exit", DIM))
+        typer.echo(_paint("  3) Restore from mapping", DIM))
         try:
             choice = typer.prompt("nemo ›").strip()
         except (KeyboardInterrupt, EOFError):
             typer.echo("")
             break
-        if choice in ("6", "q", "quit", "exit"):
+        if choice in ("5", "q", "quit", "exit"):
             break
         handler = _HANDLERS.get(choice)
         if handler is None:

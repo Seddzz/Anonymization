@@ -38,7 +38,7 @@ export default function HomePage() {
         <InstallTabs />
 
         <footer style={{ padding: "64px 0 48px", color: "var(--inkdim)", fontSize: 13 }}>
-          Built with FastAPI, PyMuPDF, transformers and MCP. MIT licensed.
+          Built with FastAPI, PyMuPDF and transformers. MIT licensed.
         </footer>
       </main>
     </>
