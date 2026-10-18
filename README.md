@@ -2,13 +2,178 @@
   <img src="docs/assets/github.jpg" alt="Nemo" width="600" />
 </p>
 
-# Nemo
+<p align="center">
+  <em>API-first PII anonymization for English documents. Runs locally, reversible by design, usable from REST, CLI, MCP — or straight from an AI agent.</em>
+</p>
 
-Anonymize English documents locally via REST API, CLI, or MCP — replace PII with stable placeholders like `[PERSON_1]` and `[IBAN_1]`, then restore when needed.
+---
 
-## Model limitations
+## What you get
 
-The NER layer uses `dslim/bert-base-NER` and inherits its trade-offs — most notably
-capitalization sensitivity (lowercase names are often missed). See
-[`docs/ner-limitations.md`](docs/ner-limitations.md) for the full analysis, observed
-failure cases, and the improvement roadmap.
+- **REST API** — FastAPI service with `/detect`, `/anonymize`, `/restore`, `/health` and an interactive Swagger UI at `http://localhost:8000/docs`.
+- **`anon` CLI** — detect, anonymize and restore `.txt` / `.pdf` files straight from your terminal.
+- **MCP server** — Model Context Protocol tools so AI agents (Claude Desktop, Cursor, …) can redact text mid-conversation.
+- **Reversible redaction** — PII becomes stable placeholders (`[PERSON_1]`, `[IBAN_1]`) or realistic fakes, and the original can be restored from a short-lived mapping.
+- **Local-first privacy** — detection runs on your machine; no request ever leaves your infrastructure.
+- **Docs site** — the `web/` folder ships a Next.js docs/playground site (deployable on Vercel) that connects to your local engine.
+
+## Requirements
+
+- **Python 3.11+** (native install) or **Docker Desktop** (containerized install)
+- ~600 MB disk for dependencies, plus ~250 MB if you enable the NER model
+- No GPU required — everything runs on CPU
+
+---
+
+## 1. Install
+
+### Option A — Docker (no Python needed)
+
+```bash
+git clone https://github.com/Seddzz/Nemo.git
+cd Nemo
+docker compose up --build
+```
+
+This starts both the FastAPI engine (`:8000`) and the Next.js frontend (`:3000`).
+
+### Option B — pip (into a virtualenv)
+
+```bash
+git clone https://github.com/Seddzz/Nemo.git
+cd Nemo
+python -m venv .venv
+.venv\Scripts\activate              # Windows (use `source .venv/bin/activate` on Linux/macOS)
+pip install -e ".[dev]" \
+  --index-url https://download.pytorch.org/whl/cpu \
+  --extra-index-url https://pypi.org/simple
+```
+
+The `--index-url` pins the **CPU-only PyTorch wheel** (~200 MB instead of a multi-GB CUDA build). Drop the flags if you have a GPU and want CUDA.
+
+### Option C — uv
+
+```bash
+git clone https://github.com/Seddzz/Nemo.git
+cd Nemo
+uv pip install -e ".[dev]"
+```
+
+---
+
+## 2. Start the engine
+
+```bash
+.venv\Scripts\uvicorn anonymizer.api:app --reload --port 8000
+```
+
+Verify it is alive:
+
+- Swagger UI: **http://localhost:8000/docs**
+- Health check: `curl http://localhost:8000/health` → `{"status":"ok"}`
+
+---
+
+## 3. Use it
+
+### REST API
+
+Detect entities (regex + checksum only, fast):
+
+```bash
+curl -X POST http://localhost:8000/detect \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Sarah Kellermann transferred EUR 4200 to IBAN DE89 3704 0044 0532 0130 00", "ner": false}'
+```
+
+Anonymize — get redacted text plus a `mapping_id`:
+
+```bash
+curl -X POST http://localhost:8000/anonymize \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Sarah Kellermann transferred €4,200 to DE89 3704 0044 0532 0130 00", "strategy": "placeholder", "ner": true}'
+```
+
+```json
+{
+  "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1]",
+  "mapping_id": "abc123",
+  "entities": [...]
+}
+```
+
+Restore the original before the mapping expires:
+
+```bash
+curl -X POST http://localhost:8000/restore \
+  -H "Content-Type: application/json" \
+  -d '{"mapping_id": "abc123", "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1]"}'
+```
+
+> Mappings live **in memory for 15 minutes (900 s)** — use them before they expire or the API returns `404`.
+
+### CLI
+
+```bash
+# detect (regex + checksum always on; add --ner for the transformer pass)
+anon detect invoice.pdf
+
+# anonymize: writes redacted output + a .mapping.json sidecar next to it
+anon anonymize invoice.txt --strategy fake -o invoice_redacted.txt
+
+# restore from the sidecar
+anon restore invoice_redacted.txt --mapping invoice_redacted.txt.mapping.json -o invoice_restored.txt
+```
+
+The CLI maps via the JSON sidecar file, so there is no server involved and no expiry.
+
+### MCP (AI agents)
+
+Run the bundled MCP server and connect it from your agent client — the agent can then call anonymize/restore tools itself and send redacted text to any LLM without ever seeing the PII.
+
+---
+
+## How detection works
+
+Three detector layers, deterministic priority on overlap (`checksum > regex > ner`):
+
+1. **Regex detectors** — emails, phone numbers, IBANs, dates, ZIPs, amounts, etc.
+2. **Checksum-validated detectors** — Luhn (credit cards), IBAN mod-97, SSN: high-precision, near-zero false positives.
+3. **Optional NER** — `dslim/bert-base-NER` via transformers for names, organizations, locations. Off by default because it downloads the model on first use and is capitalization-sensitive (see [`docs/ner-limitations.md`](docs/ner-limitations.md)).
+
+Redaction strategies: `placeholder` (stable `[LABEL_N]` tokens — consistent per value) or `fake` (realistic Faker surrogates that restore to the true original).
+
+## Tests & evaluation
+
+```bash
+ruff check .
+pytest
+python -m eval.run -n 200 --seed 0     # synthetic benchmark: precision / recall / F1
+```
+
+On the 200-document synthetic benchmark the pipeline scores **F1 = 1.000** for regex + checksum detectors.
+
+---
+
+## Roadmap — decisions to make to scale this
+
+**Model layer**
+
+- Swap `bert-base-NER` for a **GLiNER-style zero-shot model** to fix lowercase sensitivity and add new entity types without retraining — or fine-tune a DistilBERT-class model on documents representative of your corpus.
+- Add a **gazetteer / fuzzy-match pass** for customer-specific names (LLM-agnostic, instant to update).
+- Quantize or export the NER model to **ONNX Runtime** (~2–5× CPU inference speedup, smaller memory footprint).
+- Consider **multilingual** models if documents stop being English-only.
+
+**Service architecture**
+
+- Replace the in-memory mapping store with **Redis/PostgreSQL** (encrypted at rest) so mappings survive process restarts and multiple replicas, with configurable TTL.
+- Add **auth** (API keys / JWT) + rate limiting per client before any shared deployment, plus TLS at the ingress.
+- Split the NER pass into a **separate worker/pod**: it holds a large resident model; regex-only requests should not pay for it.
+- Long documents: define **chunking + overlap policy** so NER doesn't miss entities split across chunk boundaries.
+
+**Ops & packaging**
+
+- Publish to **PyPI** and ship the container image to **GHCR** so users get `pip install` / `docker pull` instead of cloning.
+- Reuse container layers: keep the base image slim (CPU wheels only) to keep pull times low.
+- Add observability (request metrics, detection latency, entity-type counts) — Prometheus/Grafana friendly.
+- CI is already running ruff + pytest on push; add a release workflow that bumps the version, builds the image and regenerates the eval report per release.
