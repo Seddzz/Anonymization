@@ -28,7 +28,7 @@ const TABS: Tab[] = [
     id: "docker",
     label: "docker",
     command: "docker compose up --build",
-    note: "Prerequisite: Clone repo first. Requires Docker Desktop running. Spins up both backend and frontend.",
+    note: "Prerequisite: Clone repo first. Requires Docker Desktop running. Starts the Nemo API on port 8000.",
   },
   {
     id: "git",

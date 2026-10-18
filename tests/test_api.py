@@ -1,3 +1,7 @@
+"""fastapi TestClient-based tests for the REST surface."""
+import io
+
+import fitz  # PyMuPDF
 from fastapi.testclient import TestClient
 
 import anonymizer.api as api
@@ -5,6 +9,14 @@ from anonymizer.api import app
 from anonymizer.detect import Entity
 
 client = TestClient(app)
+
+
+def make_pdf(*page_texts: str) -> bytes:
+    doc = fitz.open()
+    for text in page_texts:
+        page = doc.new_page()
+        page.insert_text((72, 72), text)
+    return doc.tobytes()
 
 
 class StubNer:
@@ -105,3 +117,75 @@ def test_anonymize_with_ner_opt_in_round_trip(monkeypatch):
         json={"mapping_id": body["mapping_id"], "redacted": body["redacted"]},
     )
     assert restored.json()["text"] == text
+
+
+def _post_file(path: str, name: str, data: bytes, **params: str):
+    return client.post(path, files={"file": (name, io.BytesIO(data))}, params=params)
+
+
+def test_anonymize_file_txt_round_trip():
+    original = "Contract with John Doe, email john.doe@acme.org dated 03/15/2024."
+    response = _post_file("/anonymize-file", "note.txt", original.encode("utf-8"))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["redacted"] != original
+    assert "[EMAIL_1]" in body["redacted"]
+
+    restored = client.post(
+        "/restore",
+        json={"mapping_id": body["mapping_id"], "redacted": body["redacted"]},
+    )
+    assert restored.status_code == 200
+    assert restored.json()["text"] == original
+
+
+def test_anonymize_file_pdf_extracts_and_redacts():
+    pdf = make_pdf("Invoice for John Doe. Contact john.doe@acme.org.")
+    response = _post_file("/anonymize-file", "invoice.pdf", pdf)
+    assert response.status_code == 200
+    body = response.json()
+    assert "[EMAIL_1]" in body["redacted"]
+    assert "john.doe@acme.org" not in body["redacted"]
+
+
+def test_detect_file_pdf_returns_entities():
+    pdf = make_pdf("Email support@acme.org about ISTANBUL.")
+    response = _post_file("/detect-file", "invoice.pdf", pdf)
+    assert response.status_code == 200
+    labels = [entity["label"] for entity in response.json()["entities"]]
+    assert "EMAIL" in labels
+
+def test_detect_file_txt_ner_query_param():
+    response = client.post(
+        "/detect-file",
+        files={"file": ("a.txt", io.BytesIO(b"plain text"))},
+        params={"ner": "false"},
+    )
+    assert response.status_code == 200
+
+
+def test_upload_rejects_unknown_suffix():
+    response = _post_file("/anonymize-file", "doc.exe", b"MZ...")
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
+
+
+def test_upload_rejects_empty_file():
+    response = _post_file("/anonymize-file", "note.txt", b"")
+    assert response.status_code == 400
+
+
+def test_upload_rejects_oversized_file():
+    response = client.post(
+        "/anonymize-file",
+        files={"file": ("big.txt", io.BytesIO(b"a" * (api.MAX_UPLOAD_BYTES + 1)))},
+    )
+    assert response.status_code == 413
+
+
+def test_upload_rejects_scan_with_textless_page():
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 72), "Full of names such as John Doe.")
+    doc.new_page()  # empty page: no text layer -> ScannedDocumentError
+    response = _post_file("/anonymize-file", "scan.pdf", doc.tobytes())
+    assert response.status_code == 422

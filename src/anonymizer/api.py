@@ -1,8 +1,10 @@
 """FastAPI service exposing detection, anonymization, and restoration."""
 import os
-from typing import Literal
+import tempfile
+from pathlib import Path
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -11,8 +13,13 @@ from anonymizer.anonymize import anonymize_text
 from anonymizer.detect import Entity
 from anonymizer.detectors import ALL_CHECKSUM_DETECTORS, ALL_REGEX_DETECTORS, NerDetector
 from anonymizer.engine import DetectionEngine
+from anonymizer.exceptions import ScannedDocumentError
+from anonymizer.extract import extract_pdf
 from anonymizer.restore import restore_text
 from anonymizer.store import MappingStore
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+_UPLOAD_SUFFIXES = (".txt", ".pdf")
 
 
 def _cors_origins() -> list[str]:
@@ -116,6 +123,65 @@ def health() -> HealthResponse:
 def detect(request: DetectRequest) -> DetectResponse:
     entities = _engine_for(request.ner).detect_all(request.text)
     return DetectResponse(entities=[_to_out(entity) for entity in entities])
+
+
+def _extract_upload_text(file: UploadFile) -> str:
+    """Extract .txt content or the PDF text layer of an uploaded document."""
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in _UPLOAD_SUFFIXES:
+        raise HTTPException(
+            status_code=400, detail="Unsupported file type: upload a .txt or .pdf file."
+        )
+    data = file.file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File exceeds the 10 MB upload limit.")
+    if suffix == ".pdf":
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as handle:
+            handle.write(data)
+            temp_path = Path(handle.name)
+        try:
+            try:
+                pages = extract_pdf(temp_path)
+            except ScannedDocumentError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            return "".join(page.text for page in pages)
+        finally:
+            temp_path.unlink(missing_ok=True)
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="File is not valid UTF-8 text.") from exc
+
+
+@app.post("/detect-file", response_model=DetectResponse)
+def detect_file(
+    file: Annotated[UploadFile, File()],
+    ner: bool = False,
+) -> DetectResponse:
+    """Detect entities in an uploaded .txt or .pdf document."""
+    text = _extract_upload_text(file)
+    entities = _engine_for(ner).detect_all(text)
+    return DetectResponse(entities=[_to_out(entity) for entity in entities])
+
+
+@app.post("/anonymize-file", response_model=AnonymizeResponse)
+def anonymize_file(
+    file: Annotated[UploadFile, File()],
+    strategy: Literal["placeholder", "fake"] = "placeholder",
+    ner: bool = False,
+) -> AnonymizeResponse:
+    """Anonymize an uploaded .txt or .pdf document; returns redacted text and mapping id."""
+    text = _extract_upload_text(file)
+    entities = _engine_for(ner).detect_all(text)
+    redacted, mapping = anonymize_text(text, entities, strategy=strategy)
+    mapping_id = store.save(mapping)
+    return AnonymizeResponse(
+        redacted=redacted,
+        mapping_id=mapping_id,
+        entities=[_to_out(entity) for entity in entities],
+    )
 
 
 @app.post("/anonymize", response_model=AnonymizeResponse)

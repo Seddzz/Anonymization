@@ -35,7 +35,7 @@ cd Nemo
 docker compose up --build
 ```
 
-This starts both the FastAPI engine (`:8000`) and the Next.js frontend (`:3000`).
+This starts the FastAPI engine on `:8000` (the docs site in `web/` runs separately — see below).
 
 ### Option B — pip (into a virtualenv)
 
@@ -111,6 +111,36 @@ curl -X POST http://localhost:8000/restore \
 ```
 
 > Mappings live **in memory for 15 minutes (900 s)** — use them before they expire or the API returns `404`.
+
+### Anonymize a PDF
+
+The engine extracts the PDF text layer server-side (PyMuPDF) — upload the file directly:
+
+```bash
+curl -X POST http://localhost:8000/anonymize-file \
+  -F "file=@invoice.pdf" \
+  -F "strategy=placeholder"
+```
+
+```json
+{
+  "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1] ...",
+  "mapping_id": "abc123",
+  "entities": [...]
+}
+```
+
+- Restore the redacted **text** later via `/restore` with the `mapping_id` (same 15-minute TTL).
+- `/detect-file` works identically for detection only. Plain `.txt` uploads are accepted too, up to **10 MB**.
+- Scanned PDFs without a text layer return `422` — run OCR before sending them.
+
+Prefer no curl? Run the CLI inside the container against a mounted folder:
+
+```bash
+docker compose run --rm -v "${PWD}:/data" api anon anonymize /data/invoice.pdf --strategy placeholder -o /data/invoice_redacted.txt
+```
+
+The redacted file and its `.mapping.json` sidecar (no server TTL) land back in your current folder.
 
 ### CLI
 
