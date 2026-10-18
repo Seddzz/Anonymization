@@ -154,14 +154,35 @@ docker compose run --rm -v "${PWD}:/data" api anon anonymize /data/invoice.pdf -
 
 The redacted file and its `.mapping.json` sidecar (no server TTL) land back in your current folder.
 
-# CLI
+## CLI — the one terminal home
+
+Run `anon` (or the `nemo` alias) with **no arguments** to open the interactive console:
+
+```
+█   █  █████  █   █   ███
+██  █  █      ██ ██  █   █
+█ █ █  ████   █ █ █  █   █
+█  ██  █      █   █  █   █
+█   █  █████  █   █   ███
+ nemo · 0.1.0 — everything runs on your machine
+
+  1) Anonymize a document    4) Agent (MCP) setup
+  2) Detect entities         5) Engine quickstart
+  3) Restore from mapping    6) Exit
+```
+
+- **Anonymize** walks you through: path → NER? → strategy → mapping? (default **no** — you keep the original) → output name. A PDF input produces a redacted `.pdf` with placeholders stamped in place (layout preserved).
+- **Agent setup** and **Engine quickstart** print copy-paste registration and startup commands.
+- Existing venvs need one `pip install -e . --no-deps` to pick up the `nemo` alias.
+
+Scripted usage (same engine):
 
 ```bash
 # detect (regex + checksum always on; add --ner for the transformer pass)
 anon detect invoice.pdf
 
-# anonymize: writes redacted output; --mapping / --no-mapping controls the sidecar
-anon anonymize invoice.txt --strategy fake -o invoice_redacted.txt
+# anonymize: redacted output; PDF in -> PDF out; --mapping / --no-mapping controls the sidecar
+anon anonymize invoice.pdf -o invoice_redacted.pdf --no-mapping
 
 # restore from the sidecar (only if you asked for --mapping)
 anon restore invoice_redacted.txt --mapping invoice_redacted.txt.mapping.json -o invoice_restored.txt
