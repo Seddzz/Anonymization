@@ -2,6 +2,7 @@ import pytest
 
 from anonymizer.anonymize import anonymize_text
 from anonymizer.detect import Entity
+from anonymizer.fakes import FakeGenerator
 
 
 def test_single_entity():
@@ -70,3 +71,51 @@ def test_bad_offsets_raise():
     entities = [Entity("PERSON", 0, 8, "Jane Doe", 1.0, "ner")]
     with pytest.raises(AssertionError):
         anonymize_text(text, entities)
+
+
+def test_unknown_strategy_raises():
+    with pytest.raises(ValueError, match="unknown strategy"):
+        anonymize_text("x", [], strategy="nope")
+
+
+def test_fake_strategy_replaces_with_surrogate():
+    text = "Hello John Doe!"
+    entities = [Entity("PERSON", 6, 14, "John Doe", 1.0, "ner")]
+    redacted, mapping = anonymize_text(
+        text, entities, strategy="fake", faker=FakeGenerator(seed=1)
+    )
+    assert "John Doe" not in redacted
+    assert redacted.startswith("Hello ") and redacted.endswith("!")
+    assert list(mapping.values()) == ["John Doe"]
+
+
+def test_fake_strategy_is_deterministic_with_seed():
+    text = "John Doe"
+    entities = [Entity("PERSON", 0, 8, "John Doe", 1.0, "ner")]
+    first = anonymize_text(text, entities, strategy="fake", faker=FakeGenerator(seed=42))
+    second = anonymize_text(text, entities, strategy="fake", faker=FakeGenerator(seed=42))
+    assert first == second
+
+
+def test_fake_strategy_reuses_surrogate_for_repeated_value():
+    text = "John met John"
+    entities = [
+        Entity("PERSON", 0, 4, "John", 1.0, "ner"),
+        Entity("PERSON", 9, 13, "John", 1.0, "ner"),
+    ]
+    redacted, mapping = anonymize_text(
+        text, entities, strategy="fake", faker=FakeGenerator(seed=3)
+    )
+    assert len(mapping) == 1
+    surrogate = next(iter(mapping))
+    assert redacted == f"{surrogate} met {surrogate}"
+
+
+def test_fake_strategy_gives_distinct_values_distinct_surrogates():
+    text = "John Doe and Jane Doe"
+    entities = [
+        Entity("PERSON", 0, 8, "John Doe", 1.0, "ner"),
+        Entity("PERSON", 13, 21, "Jane Doe", 1.0, "ner"),
+    ]
+    _, mapping = anonymize_text(text, entities, strategy="fake", faker=FakeGenerator(seed=2))
+    assert len(mapping) == 2
