@@ -30,4 +30,12 @@ tests/__pycache__/
 
 # Environment / secrets
 .env
-.env.local
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel
+*.tsbuildinfo
