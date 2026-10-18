@@ -1,4 +1,8 @@
-# Anonymizer API
+<p align="center">
+  <img src="docs/assets/banner.png" alt="Nemo" width="100%" />
+</p>
+
+# Nemo
 
 Anonymize English documents locally via REST API, CLI, or MCP — replace PII with stable placeholders like `[PERSON_1]` and `[IBAN_1]`, then restore when needed.
 
