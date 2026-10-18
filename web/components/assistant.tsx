@@ -167,6 +167,7 @@ export function Assistant() {
                       key={suggestion}
                       type="button"
                       className="assistant-suggestion"
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => send(suggestion)}
                     >
                       {suggestion}
@@ -225,7 +226,9 @@ export function Assistant() {
             setFocused(true);
             setMinimized(false);
           }}
-          onBlur={() => {
+          onBlur={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (next && event.currentTarget.closest(".assistant-dock")?.contains(next)) return;
             if (!input.trim() && !busy) setFocused(false);
           }}
           onKeyDown={(event) => {
