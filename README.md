@@ -154,24 +154,40 @@ docker compose run --rm -v "${PWD}:/data" api anon anonymize /data/invoice.pdf -
 
 The redacted file and its `.mapping.json` sidecar (no server TTL) land back in your current folder.
 
-### CLI
+# CLI
 
 ```bash
 # detect (regex + checksum always on; add --ner for the transformer pass)
 anon detect invoice.pdf
 
-# anonymize: writes redacted output + a .mapping.json sidecar next to it
+# anonymize: writes redacted output; --mapping / --no-mapping controls the sidecar
 anon anonymize invoice.txt --strategy fake -o invoice_redacted.txt
 
-# restore from the sidecar
+# restore from the sidecar (only if you asked for --mapping)
 anon restore invoice_redacted.txt --mapping invoice_redacted.txt.mapping.json -o invoice_restored.txt
 ```
 
-The CLI maps via the JSON sidecar file, so there is no server involved and no expiry.
+Keeping the original? Skip the sidecar — no mapping, no expiry, nothing else to manage.
 
-### MCP (AI agents)
+### Agents (MCP)
 
-Run the bundled MCP server and connect it from your agent client — the agent can then call anonymize/restore tools itself and send redacted text to any LLM without ever seeing the PII.
+Register the bundled MCP server with any local agent — the agent itself then works on files like a power user:
+
+- **Claude Code** (run in the project root, venv active):
+  ```bash
+  claude mcp add nemo -- python -m anonymizer.mcp_server
+  ```
+- **Codex CLI** — add to `~/.codex/config.toml`:
+  ```toml
+  [mcp_servers.nemo]
+  command = "python"                # or the absolute path to your .venv python
+  args = ["-m", "anonymizer.mcp_server"]
+  ```
+- **Cursor / any MCP client** — command `python`, args `["-m", "anonymizer.mcp_server"]`.
+
+Then it's a one-line command: *"Use the `anonymize_pdf` tool on `invoice.pdf`, then summarize the redacted text."* The agent gets a redacted PDF written next to the original, the redacted text to forward to any LLM, and per-entity counters — while **you keep the original**, so no mapping is required (pass `include_mapping=True` only if you ever want the value table). `ner=True` opts into the transformer pass.
+
+The `detect`, `anonymize` and `restore` MCP tools remain for plain-text chat flows (those do use the 15-minute mapping store).
 
 ---
 

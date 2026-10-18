@@ -57,18 +57,25 @@ def anonymize(
     strategy: Annotated[
         Strategy, typer.Option("--strategy", help="Redaction strategy.")
     ] = Strategy.placeholder,
+    sidecar: Annotated[
+        bool,
+        typer.Option(
+            "--mapping/--no-mapping",
+            help="Write the mapping sidecar for later restoration.",
+        ),
+    ] = True,
 ) -> None:
-    """Redact a document and write a mapping sidecar next to the output."""
+    """Redact a document and optionally write a mapping sidecar next to the output."""
     text = _read_text(path)
     entities = engine.detect_all(text)
     redacted, mapping = anonymize_text(text, entities, strategy=strategy.value)
 
     output.write_text(redacted, encoding="utf-8")
-    mapping_path = output.with_suffix(output.suffix + ".mapping.json")
-    mapping_path.write_text(json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
-
     typer.echo(f"Redacted {len(entities)} entities -> {output}")
-    typer.echo(f"Mapping -> {mapping_path} (sensitive: contains original values)")
+    if sidecar:
+        mapping_path = output.with_suffix(output.suffix + ".mapping.json")
+        mapping_path.write_text(json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
+        typer.echo(f"Mapping -> {mapping_path} (sensitive: contains original values)")
 
 
 @app.command()
