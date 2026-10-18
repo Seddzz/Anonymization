@@ -1,1 +1,1 @@
-"""Anonymizer: API-first anonymization for French documents."""
+"""Anonymizer: API-first anonymization for English documents."""

@@ -18,7 +18,7 @@ class NerDetector:
             model=self.model,
             tokenizer=self.tokenizer,
             aggregation_strategy="simple",
-        )
+            )
         self.confidence_threshold = confidence_threshold
 
     def detect(self, text: str) -> list[Entity]:
