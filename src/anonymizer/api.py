@@ -1,7 +1,9 @@
 """FastAPI service exposing detection, anonymization, and restoration."""
+import os
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from anonymizer.anonymize import anonymize_text
@@ -10,7 +12,19 @@ from anonymizer.engine import DetectionEngine
 from anonymizer.restore import restore_text
 from anonymizer.store import MappingStore
 
+
+def _cors_origins() -> list[str]:
+    raw = os.getenv("ANONYMIZER_CORS_ORIGINS", "http://localhost:3000")
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
 app = FastAPI(title="Anonymizer API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 engine = DetectionEngine()
 store = MappingStore()

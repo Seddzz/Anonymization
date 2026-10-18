@@ -47,3 +47,13 @@ def test_restore_unknown_mapping_id_returns_404():
 def test_anonymize_invalid_strategy_returns_422():
     response = client.post("/anonymize", json={"text": "x", "strategy": "nope"})
     assert response.status_code == 422
+
+
+def test_cors_allows_local_dev_origin():
+    response = client.get("/health", headers={"Origin": "http://localhost:3000"})
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_cors_rejects_unknown_origin():
+    response = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in response.headers
