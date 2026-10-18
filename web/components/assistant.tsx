@@ -71,10 +71,12 @@ function inline(text: string): ReactNode[] {
   return nodes;
 }
 
+type ListItem = { num: number | null; text: string };
+
 function renderMarkdown(text: string): ReactNode {
   const lines = text.split(/\r?\n/);
   const blocks: ReactNode[] = [];
-  let list: string[] = [];
+  let list: ListItem[] = [];
   let listType: "ul" | "ol" | null = null;
   let key = 0;
 
@@ -84,14 +86,17 @@ function renderMarkdown(text: string): ReactNode {
 
   const flush = () => {
     if (list.length === 0) return;
-    const items = list.map((item, index) => <li key={index}>{inline(item)}</li>);
-    blocks.push(
-      listType === "ol" ? (
-        <ol key={key++}>{items}</ol>
-      ) : (
-        <ul key={key++}>{items}</ul>
-      ),
-    );
+    const items = list.map((item, index) => <li key={index}>{inline(item.text)}</li>);
+    if (listType === "ol") {
+      const start = list[0].num ?? 1;
+      blocks.push(
+        <ol key={key++} start={start}>
+          {items}
+        </ol>,
+      );
+    } else {
+      blocks.push(<ul key={key++}>{items}</ul>);
+    }
     list = [];
     listType = null;
   };
@@ -119,8 +124,8 @@ function renderMarkdown(text: string): ReactNode {
     }
 
     const heading = /^(#{1,4})\s+(.*)$/.exec(line);
-    const bullet = /^[-*•]\s+(.*)$/.exec(line);
-    const numbered = /^\d+[.)]\s+(.*)$/.exec(line);
+    const bullet = /^[-*•–—]\s+(.*)$/.exec(line);
+    const numbered = /^(\d+)[.)]\s+(.*)$/.exec(line);
     if (heading) {
       flush();
       blocks.push(
@@ -131,11 +136,11 @@ function renderMarkdown(text: string): ReactNode {
     } else if (bullet) {
       if (listType && listType !== "ul") flush();
       listType = "ul";
-      list.push(bullet[1]);
+      list.push({ num: null, text: bullet[1] });
     } else if (numbered) {
       if (listType && listType !== "ol") flush();
       listType = "ol";
-      list.push(numbered[1]);
+      list.push({ num: Number.parseInt(numbered[1], 10), text: numbered[2] });
     } else if (line.trim() === "") {
       // Do not flush on blank lines so numbered list items separated by spaces stay in the same <ol>
     } else {
