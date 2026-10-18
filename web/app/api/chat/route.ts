@@ -10,8 +10,8 @@ const MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-const SYSTEM = `You are the AnonShield documentation assistant.
-Answer questions about the AnonShield PII anonymization project using ONLY the context below.
+const SYSTEM = `You are the Nemo documentation assistant.
+Answer questions about the Nemo PII anonymization project using ONLY the context below.
 If the answer is not in the context, say you do not know and point the user to the documentation.
 Be concise and technical, and prefer short paragraphs or bullet points.
 
@@ -28,8 +28,17 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json()) as { messages?: Message[] };
-  const messages = body.messages ?? [];
+  const messages = (body.messages ?? [])
+    .filter(
+      (message) =>
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string",
+    )
+    .slice(-8);
   const question = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  if (!question.trim()) {
+    return NextResponse.json({ error: "A question is required." }, { status: 400 });
+  }
 
   const sources = await retrieve(question, 4);
   const context = sources.map((source, index) => `[${index + 1}] ${source.title}\n${source.text}`).join("\n\n");

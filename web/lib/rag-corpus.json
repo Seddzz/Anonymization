@@ -4,12 +4,12 @@
     {
       "id": "overview",
       "title": "Project overview",
-      "text": "AnonShield is a local, API-first anonymizer for English documents. It detects personally identifiable information, redacts it, and can restore the exact originals. It has three detector families (regex, checksum, transformer NER), two redaction strategies (placeholder and fake), and is exposed through a REST API, the anon CLI, a Docker image and an MCP server."
+      "text": "Nemo is a local, API-first anonymizer for English documents. It detects personally identifiable information, redacts it, and can restore the exact originals. It has three detector families (regex, checksum, transformer NER), two redaction strategies (placeholder and fake), and is exposed through a REST API, the anon CLI, a Docker image and an MCP server."
     },
     {
       "id": "scope",
       "title": "Supported scope",
-      "text": "AnonShield targets English-language text. The NER model is dslim/bert-base-NER. Regex rules follow US conventions for phone, ZIP and dates. Checksum validation is international (IBAN mod-97, Luhn for cards and French SIREN/SIRET/NIR)."
+      "text": "Nemo targets English-language text. The NER model is dslim/bert-base-NER. Regex rules follow US conventions for phone, ZIP and dates. Checksum validation is international (IBAN mod-97, Luhn for cards and French SIREN/SIRET/NIR)."
     },
     {
       "id": "install",

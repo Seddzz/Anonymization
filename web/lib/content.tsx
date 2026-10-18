@@ -117,7 +117,7 @@ export const SECTIONS: DocSection[] = [
     body: (
       <>
         <p>
-          <strong>AnonShield</strong> finds personally identifiable information in English
+          <strong>Nemo</strong> finds personally identifiable information in English
           documents, replaces it, and can put the exact originals back. Everything runs locally —
           no text leaves your machine unless you choose to send it somewhere.
         </p>

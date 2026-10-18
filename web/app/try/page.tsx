@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Tester } from "@/components/tester";
 
 export const metadata: Metadata = {
-  title: "Try it — AnonShield",
+  title: "Try it — Nemo",
   description: "Send text to the anonymizer API, redact it, then restore it.",
 };
 

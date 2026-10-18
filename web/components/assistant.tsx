@@ -1,18 +1,20 @@
 "use client";
 
-import { Bot, Loader2, Send, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Message = { role: "user" | "assistant"; content: string };
 type Source = { id: string; title: string };
 
 export function Assistant() {
-  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const busy = Boolean(messages.length || loading || error);
 
   async function send() {
     const question = input.trim();
@@ -39,46 +41,43 @@ export function Assistant() {
     }
   }
 
+  function expand() {
+    setOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  if (!open && !busy) {
+    return (
+      <div className="assistant-dock">
+        <button type="button" className="assistant-pill" onClick={expand} aria-label="Ask Nemo">
+          <span className="assistant-orb" aria-hidden="true">
+            <span className="material-symbols-outlined">robot_2</span>
+          </span>
+          <span className="assistant-pill-label">Ask Nemo</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <button
-        type="button"
-        className="btn"
-        onClick={() => setOpen(true)}
-        aria-label="Ask the assistant"
-      >
-        <Bot className="icon" size={16} />
-        Ask
-      </button>
-      {open ? (
-        <div className="assistant-panel" role="dialog" aria-label="Documentation assistant">
+    <div className={`assistant-dock ${busy ? "has-response" : ""}`}>
+      {busy ? (
+        <div className="assistant-response" role="status" aria-live="polite">
           <div className="assistant-head">
-            <Bot className="icon" size={16} />
+            <span className="assistant-orb" aria-hidden="true">
+              <span className="material-symbols-outlined">robot_2</span>
+            </span>
             <span className="assistant-title">Assistant</span>
-            <button
-              type="button"
-              className="assistant-close"
-              onClick={() => setOpen(false)}
-              aria-label="Close assistant"
-            >
-              <X size={16} />
-            </button>
           </div>
           <div className="assistant-log">
-            {messages.length === 0 ? (
-              <p className="assistant-hint">
-                Ask about installation, the API, redaction strategies, the CLI or limitations.
-              </p>
-            ) : (
-              messages.map((message, index) => (
-                <div key={index} className={`msg ${message.role}`}>
-                  {message.content}
-                </div>
-              ))
-            )}
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`msg ${message.role}`}>
+                {message.content}
+              </div>
+            ))}
             {loading ? (
               <div className="msg assistant">
-                <Loader2 className="icon spin" size={14} /> thinking…
+                <span className="material-symbols-outlined spin">progress_activity</span> thinking…
               </div>
             ) : null}
             {error ? <div className="msg assistant assistant-error">{error}</div> : null}
@@ -92,29 +91,31 @@ export function Assistant() {
               </div>
             ) : null}
           </div>
-          <div className="assistant-input">
-            <input
-              className="input"
-              value={input}
-              placeholder="Ask a question…"
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") send();
-              }}
-              aria-label="Question"
-            />
-            <button
-              type="button"
-              className="btn btn-accent"
-              onClick={send}
-              disabled={loading}
-              aria-label="Send question"
-            >
-              <Send className="icon" size={16} />
-            </button>
-          </div>
         </div>
       ) : null}
-    </>
+      <div className="assistant-input">
+        <input
+          id="assistant-input"
+          ref={inputRef}
+          className="input"
+          value={input}
+          placeholder="Ask Nemo…"
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") send();
+          }}
+          aria-label="Question"
+        />
+        <button
+          type="button"
+          className="assistant-send"
+          onClick={send}
+          disabled={loading}
+          aria-label="Send question"
+        >
+          <span className="material-symbols-outlined">arrow_upward</span>
+        </button>
+      </div>
+    </div>
   );
 }

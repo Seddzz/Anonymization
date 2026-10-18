@@ -38,7 +38,7 @@ export default function HomePage() {
             <span className="hero-accent">Put it back afterwards.</span>
           </h1>
           <p>
-            AnonShield is an API-first anonymizer for English documents. Detect names, emails,
+            Nemo is an API-first anonymizer for English documents. Detect names, emails,
             bank details and identifiers locally, redact them with placeholders or fake values,
             and reverse the change when you need to.
           </p>
