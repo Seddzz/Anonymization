@@ -1,0 +1,99 @@
+"""FastAPI service exposing detection, anonymization, and restoration."""
+from typing import Literal
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+from anonymizer.anonymize import anonymize_text
+from anonymizer.detect import Entity
+from anonymizer.engine import DetectionEngine
+from anonymizer.restore import restore_text
+from anonymizer.store import MappingStore
+
+app = FastAPI(title="Anonymizer API", version="0.1.0")
+
+engine = DetectionEngine()
+store = MappingStore()
+
+
+class DetectRequest(BaseModel):
+    text: str
+
+
+class EntityOut(BaseModel):
+    label: str
+    start: int
+    end: int
+    text: str
+    score: float
+    source: str
+
+
+class DetectResponse(BaseModel):
+    entities: list[EntityOut]
+
+
+class AnonymizeRequest(BaseModel):
+    text: str
+    strategy: Literal["placeholder", "fake"] = "placeholder"
+
+
+class AnonymizeResponse(BaseModel):
+    redacted: str
+    mapping_id: str
+    entities: list[EntityOut]
+
+
+class RestoreRequest(BaseModel):
+    mapping_id: str
+    redacted: str
+
+
+class RestoreResponse(BaseModel):
+    text: str
+
+
+class HealthResponse(BaseModel):
+    status: str
+
+
+def _to_out(entity: Entity) -> EntityOut:
+    return EntityOut(
+        label=entity.label,
+        start=entity.start,
+        end=entity.end,
+        text=entity.text,
+        score=entity.score,
+        source=entity.source,
+    )
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok")
+
+
+@app.post("/detect", response_model=DetectResponse)
+def detect(request: DetectRequest) -> DetectResponse:
+    entities = engine.detect_all(request.text)
+    return DetectResponse(entities=[_to_out(entity) for entity in entities])
+
+
+@app.post("/anonymize", response_model=AnonymizeResponse)
+def anonymize(request: AnonymizeRequest) -> AnonymizeResponse:
+    entities = engine.detect_all(request.text)
+    redacted, mapping = anonymize_text(request.text, entities, strategy=request.strategy)
+    mapping_id = store.save(mapping)
+    return AnonymizeResponse(
+        redacted=redacted,
+        mapping_id=mapping_id,
+        entities=[_to_out(entity) for entity in entities],
+    )
+
+
+@app.post("/restore", response_model=RestoreResponse)
+def restore(request: RestoreRequest) -> RestoreResponse:
+    mapping = store.get(request.mapping_id)
+    if mapping is None:
+        raise HTTPException(status_code=404, detail="mapping not found or expired")
+    return RestoreResponse(text=restore_text(request.redacted, mapping))
