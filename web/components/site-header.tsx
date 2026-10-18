@@ -37,7 +37,7 @@ export function SiteHeader() {
           ))}
           <a
             className="gh-link"
-            href="https://github.com/Seddzz/Anonymization"
+            href="https://github.com/Seddzz/Nemo"
             target="_blank"
             rel="noreferrer"
           >

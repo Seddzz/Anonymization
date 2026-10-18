@@ -14,7 +14,7 @@ const TABS: Tab[] = [
   },
   { id: "uv", label: "uv", command: "uv sync" },
   { id: "docker", label: "docker", command: "docker compose up --build" },
-  { id: "git", label: "git", command: "git clone https://github.com/Seddzz/Anonymization.git" },
+  { id: "git", label: "git", command: "git clone https://github.com/Seddzz/Nemo.git" },
 ];
 
 export function InstallTabs() {
