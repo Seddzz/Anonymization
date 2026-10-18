@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/github.jpg" alt="Nemo" width="320" />
+  <img src="docs/assets/github.jpg" alt="Nemo" width="500" />
 </p>
 
 # Nemo
