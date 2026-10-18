@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -15,6 +16,39 @@ const SUGGESTIONS = [
 
 function clock(at: number): string {
   return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function CodeBlock({ lang, code }: { lang: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="codeblock md-codeblock">
+      <div className="codeblock-head">
+        <span>{lang || "code"}</span>
+        <button
+          type="button"
+          className="codeblock-copy"
+          onClick={handleCopy}
+          aria-label="Copy code block"
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+        </button>
+      </div>
+      <pre>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
 }
 
 function inline(text: string): ReactNode[] {
@@ -44,6 +78,10 @@ function renderMarkdown(text: string): ReactNode {
   let listType: "ul" | "ol" | null = null;
   let key = 0;
 
+  let inCode = false;
+  let codeLang = "";
+  let codeLines: string[] = [];
+
   const flush = () => {
     if (list.length === 0) return;
     const items = list.map((item, index) => <li key={index}>{inline(item)}</li>);
@@ -60,6 +98,26 @@ function renderMarkdown(text: string): ReactNode {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
+    const fenceMatch = /^```(\w*)\s*$/.exec(line.trim());
+    if (fenceMatch) {
+      flush();
+      if (inCode) {
+        blocks.push(<CodeBlock key={key++} lang={codeLang} code={codeLines.join("\n")} />);
+        codeLines = [];
+        codeLang = "";
+        inCode = false;
+      } else {
+        inCode = true;
+        codeLang = fenceMatch[1];
+      }
+      continue;
+    }
+
+    if (inCode) {
+      codeLines.push(raw);
+      continue;
+    }
+
     const heading = /^(#{1,4})\s+(.*)$/.exec(line);
     const bullet = /^[-*•]\s+(.*)$/.exec(line);
     const numbered = /^\d+[.)]\s+(.*)$/.exec(line);
@@ -86,6 +144,9 @@ function renderMarkdown(text: string): ReactNode {
     }
   }
   flush();
+  if (inCode) {
+    blocks.push(<CodeBlock key={key++} lang={codeLang} code={codeLines.join("\n")} />);
+  }
   return blocks;
 }
 

@@ -380,11 +380,30 @@ button {
   background: var(--soft);
 }
 .codeblock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 14px;
   border-bottom: 1px solid var(--linesoft);
   background: var(--bg);
   font-size: 12.5px;
   color: var(--inkdim);
+}
+.codeblock-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--linesoft);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--inksoft);
+  cursor: pointer;
+}
+.codeblock-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 .codeblock pre {
   margin: 0;
