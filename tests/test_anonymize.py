@@ -1,6 +1,6 @@
 import pytest
 
-from anonymizer.anonymize import anonymize_text
+from anonymizer.anonymize import anonymize_text, replacement_table
 from anonymizer.detect import Entity
 from anonymizer.fakes import FakeGenerator
 
@@ -8,9 +8,8 @@ from anonymizer.fakes import FakeGenerator
 def test_single_entity():
     text = "Hello John Doe!"
     entities = [Entity("PERSON", 6, 14, "John Doe", 1.0, "ner")]
-    redacted, mapping = anonymize_text(text, entities)
+    redacted = anonymize_text(text, entities)
     assert redacted == "Hello [PERSON_1]!"
-    assert mapping == {"[PERSON_1]": "John Doe"}
 
 
 def test_multiple_labels():
@@ -19,9 +18,8 @@ def test_multiple_labels():
         Entity("EMAIL", 6, 13, "a@b.com", 1.0, "regex"),
         Entity("PERSON", 19, 23, "John", 1.0, "ner"),
     ]
-    redacted, mapping = anonymize_text(text, entities)
+    redacted = anonymize_text(text, entities)
     assert redacted == "Email [EMAIL_1] from [PERSON_1]"
-    assert mapping == {"[EMAIL_1]": "a@b.com", "[PERSON_1]": "John"}
 
 
 def test_repeated_value_reuses_placeholder():
@@ -30,19 +28,17 @@ def test_repeated_value_reuses_placeholder():
         Entity("PERSON", 0, 4, "John", 1.0, "ner"),
         Entity("PERSON", 9, 13, "John", 1.0, "ner"),
     ]
-    redacted, mapping = anonymize_text(text, entities)
+    redacted = anonymize_text(text, entities)
     assert redacted == "[PERSON_1] met [PERSON_1]"
-    assert mapping == {"[PERSON_1]": "John"}
 
 
 def test_numbering_is_per_label():
-    text = "a b"
     entities = [
         Entity("X", 0, 1, "a", 1.0, "regex"),
         Entity("Y", 2, 3, "b", 1.0, "regex"),
     ]
-    _, mapping = anonymize_text(text, entities)
-    assert set(mapping) == {"[X_1]", "[Y_1]"}
+    table = replacement_table(entities)
+    assert set(table.values()) == {"[X_1]", "[Y_1]"}
 
 
 def test_adjacent_spans():
@@ -51,19 +47,16 @@ def test_adjacent_spans():
         Entity("X", 0, 1, "a", 1.0, "regex"),
         Entity("X", 1, 2, "b", 1.0, "regex"),
     ]
-    redacted, _ = anonymize_text(text, entities)
-    assert redacted == "[X_1][X_2]"
+    assert anonymize_text(text, entities) == "[X_1][X_2]"
 
 
 def test_empty_input():
-    assert anonymize_text("", []) == ("", {})
+    assert anonymize_text("", []) == ""
 
 
 def test_text_without_entities_is_unchanged():
     text = "nothing to redact here"
-    redacted, mapping = anonymize_text(text, [])
-    assert redacted == text
-    assert mapping == {}
+    assert anonymize_text(text, []) == text
 
 
 def test_bad_offsets_raise():
@@ -81,12 +74,9 @@ def test_unknown_strategy_raises():
 def test_fake_strategy_replaces_with_surrogate():
     text = "Hello John Doe!"
     entities = [Entity("PERSON", 6, 14, "John Doe", 1.0, "ner")]
-    redacted, mapping = anonymize_text(
-        text, entities, strategy="fake", faker=FakeGenerator(seed=1)
-    )
+    redacted = anonymize_text(text, entities, strategy="fake", faker=FakeGenerator(seed=1))
     assert "John Doe" not in redacted
     assert redacted.startswith("Hello ") and redacted.endswith("!")
-    assert list(mapping.values()) == ["John Doe"]
 
 
 def test_fake_strategy_is_deterministic_with_seed():
@@ -103,19 +93,19 @@ def test_fake_strategy_reuses_surrogate_for_repeated_value():
         Entity("PERSON", 0, 4, "John", 1.0, "ner"),
         Entity("PERSON", 9, 13, "John", 1.0, "ner"),
     ]
-    redacted, mapping = anonymize_text(
-        text, entities, strategy="fake", faker=FakeGenerator(seed=3)
+    table = replacement_table(entities, strategy="fake", faker=FakeGenerator(seed=3))
+    assert len(table) == 1
+    surrogate = next(iter(table.values()))
+    redacted = anonymize_text(
+        text, entities, strategy="fake", faker=FakeGenerator(seed=3), replacements=table
     )
-    assert len(mapping) == 1
-    surrogate = next(iter(mapping))
     assert redacted == f"{surrogate} met {surrogate}"
 
 
 def test_fake_strategy_gives_distinct_values_distinct_surrogates():
-    text = "John Doe and Jane Doe"
     entities = [
         Entity("PERSON", 0, 8, "John Doe", 1.0, "ner"),
         Entity("PERSON", 13, 21, "Jane Doe", 1.0, "ner"),
     ]
-    _, mapping = anonymize_text(text, entities, strategy="fake", faker=FakeGenerator(seed=2))
-    assert len(mapping) == 2
+    table = replacement_table(entities, strategy="fake", faker=FakeGenerator(seed=2))
+    assert len(set(table.values())) == 2

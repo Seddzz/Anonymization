@@ -1,5 +1,5 @@
 """Tests for the anonymizer CLI, including the interactive console."""
-import fitz  # PyMuPDF
+import pymupdf as fitz
 from typer.testing import CliRunner
 
 from anonymizer import __version__
@@ -30,7 +30,7 @@ def test_detect_lists_entities(tmp_path):
     assert "EMAIL" in result.stdout
 
 
-def test_anonymize_writes_redacted_and_mapping(tmp_path):
+def test_anonymize_writes_redacted_only(tmp_path):
     document = tmp_path / "doc.txt"
     document.write_text("Email a@b.com", encoding="utf-8")
     output = tmp_path / "out.txt"
@@ -39,31 +39,7 @@ def test_anonymize_writes_redacted_and_mapping(tmp_path):
 
     assert result.exit_code == 0
     assert "[EMAIL_1]" in output.read_text(encoding="utf-8")
-    assert (tmp_path / "out.txt.mapping.json").exists()
-
-
-def test_anonymize_then_restore_round_trip(tmp_path):
-    original = "Email a@b.com from us"
-    document = tmp_path / "doc.txt"
-    document.write_text(original, encoding="utf-8")
-    output = tmp_path / "out.txt"
-    runner.invoke(app, ["anonymize", str(document), "-o", str(output)])
-
-    restored = tmp_path / "restored.txt"
-    result = runner.invoke(
-        app,
-        [
-            "restore",
-            str(output),
-            "--mapping",
-            str(tmp_path / "out.txt.mapping.json"),
-            "-o",
-            str(restored),
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert restored.read_text(encoding="utf-8") == original
+    assert not (tmp_path / "out.txt.mapping.json").exists()
 
 
 def test_anonymize_fake_strategy(tmp_path):
@@ -96,19 +72,7 @@ def test_anonymize_pdf_output(tmp_path):
     page_text = " ".join(page.get_text("text") for page in reopened)
     assert "john.doe@acme.org" not in page_text
     assert "[EMAIL_1]" in page_text
-    assert (tmp_path / "invoice_redacted.pdf.mapping.json").exists()
-
-
-def test_anonymize_no_mapping(tmp_path):
-    document = tmp_path / "doc.txt"
-    document.write_text("Email a@b.com", encoding="utf-8")
-    output = tmp_path / "out.txt"
-
-    result = runner.invoke(app, ["anonymize", str(document), "-o", str(output), "--no-mapping"])
-
-    assert result.exit_code == 0
-    assert output.exists()
-    assert not (tmp_path / "out.txt.mapping.json").exists()
+    assert not (tmp_path / "invoice_redacted.pdf.mapping.json").exists()
 
 
 def test_anonymize_pdf_output_requires_pdf_input(tmp_path):
@@ -124,7 +88,7 @@ def test_anonymize_pdf_output_requires_pdf_input(tmp_path):
 
 
 def test_console_opens_and_exits():
-    result = runner.invoke(app, [], input="5\n")
+    result = runner.invoke(app, [], input="4\n")
     assert result.exit_code == 0
     assert "Anonymize a document" in result.output
     assert "nemo" in result.output
@@ -133,7 +97,7 @@ def test_console_opens_and_exits():
 def test_console_anonymize_flow(tmp_path):
     document = tmp_path / "doc.txt"
     document.write_text("Email a@b.com", encoding="utf-8")
-    feed = f"1\n{document}\nn\n\nn\n\n5\n"
+    feed = f"1\n{document}\nn\n\n\n4\n"
 
     result = runner.invoke(app, [], input=feed)
 
@@ -146,7 +110,7 @@ def test_console_anonymize_flow(tmp_path):
 
 def test_console_pdf_flow(tmp_path):
     document = make_pdf(tmp_path / "invoice.pdf", "Contact a@b.com now.")
-    feed = f"1\n{document}\nn\n\nn\n\n5\n"
+    feed = f"1\n{document}\nn\n\n\n4\n"
 
     result = runner.invoke(app, [], input=feed)
 
@@ -159,26 +123,12 @@ def test_console_pdf_flow(tmp_path):
 
 
 def test_console_engine_guide():
-    result = runner.invoke(app, [], input="4\n5\n")
+    result = runner.invoke(app, [], input="3\n4\n")
     assert result.exit_code == 0
     assert "uvicorn anonymizer.api:app" in result.output
 
 
 def test_console_unknown_option_recovers():
-    result = runner.invoke(app, [], input="99\n5\n")
+    result = runner.invoke(app, [], input="99\n4\n")
     assert result.exit_code == 0
     assert "Unknown option" in result.output
-
-
-def test_console_restore_flow(tmp_path):
-    original = "Email a@b.com from us"
-    document = tmp_path / "doc.txt"
-    document.write_text(original, encoding="utf-8")
-    runner.invoke(app, ["anonymize", str(document), "-o", str(tmp_path / "out.txt")])
-
-    feed = f"3\n{tmp_path / 'out.txt'}\n{tmp_path / 'out.txt.mapping.json'}\n\n5\n"
-    result = runner.invoke(app, [], input=feed)
-
-    assert result.exit_code == 0
-    restored = tmp_path / "out_restored.txt"
-    assert restored.read_text(encoding="utf-8") == original

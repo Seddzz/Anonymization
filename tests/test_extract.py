@@ -1,6 +1,6 @@
 import base64
 
-import fitz  # PyMuPDF
+import pymupdf as fitz
 import pytest
 
 from anonymizer.exceptions import ScannedDocumentError

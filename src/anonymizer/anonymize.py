@@ -40,18 +40,31 @@ def replacement_table(
     return replacement_by_key
 
 
+def apply_replacements(
+    text: str,
+    entities: list[Entity],
+    replacement_by_key: dict[tuple[str, str], str],
+) -> str:
+    """Splice every replacement into ``text`` right-to-left so earlier offsets stay valid."""
+    redacted = text
+    for entity in sorted(entities, key=lambda e: e.start, reverse=True):
+        replacement = replacement_by_key[(entity.label, entity.text)]
+        redacted = redacted[: entity.start] + replacement + redacted[entity.end :]
+    return redacted
+
+
 def anonymize_text(
     text: str,
     entities: list[Entity],
     strategy: str = "placeholder",
     faker: FakeGenerator | None = None,
-) -> tuple[str, dict[str, str]]:
-    """Replace each entity span and return ``(redacted_text, mapping)``.
+    replacements: dict[tuple[str, str], str] | None = None,
+) -> str:
+    """Replace each entity span and return the redacted text.
 
-    ``mapping`` maps every replacement back to its original value, so the
-    redacted text can be reversed with :func:`anonymizer.restore.restore_text`.
-    The same ``(label, value)`` pair always receives the same replacement, so
-    repeated values stay consistent and the mapping stays small.
+    Redaction is one-way by design: there is no mapping kept, returned or
+    stored anywhere. The same ``(label, value)`` pair always receives the same
+    replacement, so repeated values stay consistent within a document.
 
     Strategy:
         ``"placeholder"`` (default) uses numbered tokens like ``[PERSON_1]``.
@@ -60,17 +73,9 @@ def anonymize_text(
     ``entities`` must be non-overlapping (the DetectionEngine guarantees this).
     """
     validate_entity_offsets(text, entities)
-    replacement_by_key = replacement_table(entities, strategy=strategy, faker=faker)
-
-    mapping: dict[str, str] = {
-        replacement: original
-        for (label, original), replacement in replacement_by_key.items()
-    }
-
-    # Splice right-to-left so earlier offsets stay valid while editing.
-    redacted = text
-    for entity in sorted(entities, key=lambda e: e.start, reverse=True):
-        replacement = replacement_by_key[(entity.label, entity.text)]
-        redacted = redacted[: entity.start] + replacement + redacted[entity.end :]
-
-    return redacted, mapping
+    table = (
+        replacements
+        if replacements is not None
+        else replacement_table(entities, strategy=strategy, faker=faker)
+    )
+    return apply_replacements(text, entities, table)

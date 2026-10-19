@@ -46,7 +46,6 @@ const ANON_REQUEST = `curl -X POST http://localhost:8000/anonymize \\
 
 const ANON_RESPONSE = `{
   "redacted": "Email [EMAIL_1] from [PERSON_1]",
-  "mapping_id": "map_3f9a1c02",
   "entities": [
     {"label": "EMAIL", "start": 6, "end": 13, "text": "a@b.com",
      "score": 1.0, "source": "regex"},
@@ -55,25 +54,17 @@ const ANON_RESPONSE = `{
   ]
 }`;
 
-const RESTORE_REQUEST = `curl -X POST http://localhost:8000/restore \\
-  -H "Content-Type: application/json" \\
-  -d '{"mapping_id": "map_3f9a1c02", "redacted": "Email [EMAIL_1] from [PERSON_1]"}'`;
-
 const CLI = `# Inspect what would be detected
 anon detect contract.txt
 
-# Redact with placeholders (default) and write a mapping sidecar
+# Redact with placeholders (default)
 anon anonymize contract.txt -o contract.clean.txt
 
 # Use realistic fake values instead of placeholders
 anon anonymize contract.txt -o contract.clean.txt --strategy fake
 
-# Reverse the redaction
-anon restore contract.clean.txt \\
-  --mapping contract.clean.txt.mapping.json -o contract.restored.txt
-
 # PDFs are supported too (text layer required)
-anon anonymize report.pdf -o report.clean.txt`;
+anon anonymize report.pdf -o report.clean.pdf`;
 
 const DOCKER = `# Build the CPU-only image
 docker build -t anonymizer-api .
@@ -96,7 +87,7 @@ export const SECTIONS: DocSection[] = [
     group: "Getting started",
     label: "Introduction",
     title: "Introduction",
-    subtitle: "Local, reversible PII anonymization for English text",
+    subtitle: "Local, one-way PII anonymization for English text",
     toc: [
       { id: "what", label: "What it does" },
       { id: "pipeline", label: "The pipeline" },
@@ -105,9 +96,10 @@ export const SECTIONS: DocSection[] = [
     body: (
       <>
         <p>
-          <strong>Nemo</strong> finds personally identifiable information in English
-          documents, replaces it, and can put the exact originals back. Everything runs locally —
-          no text leaves your machine unless you choose to send it somewhere.
+          <strong>Nemo</strong> finds personally identifiable information in English documents and
+          replaces it with placeholders or fakes. Everything runs locally — no text leaves your
+          machine unless you choose to send it somewhere, and no mapping is ever kept: redaction is
+          one-way on purpose.
         </p>
         <div className="callout">
           <span>
@@ -123,7 +115,7 @@ export const SECTIONS: DocSection[] = [
           <li>Validates IBANs, card numbers, SIREN, SIRET and NIR with checksums.</li>
           <li>Finds names, organisations and locations with a transformer NER model.</li>
           <li>Redacts with stable placeholders or realistic fake values.</li>
-          <li>Restores the original text from a short-lived mapping.</li>
+          <li>Keeps no history: redacted text is the only artifact.</li>
         </ul>
 
         <h2 id="pipeline">The pipeline</h2>
@@ -141,8 +133,8 @@ export const SECTIONS: DocSection[] = [
             for repeated values.
           </li>
           <li>
-            <strong>fake</strong> — realistic surrogates such as a new name, email or IBAN, while
-            keeping a reversible mapping.
+            <strong>fake</strong> — realistic surrogates such as a new name, email or IBAN, so the
+            document stays readable.
           </li>
         </ul>
       </>
@@ -268,62 +260,24 @@ export const SECTIONS: DocSection[] = [
       <>
         <p>
           <code>anonymize_text(text, entities, strategy)</code> replaces each entity span and
-          returns the redacted text plus a mapping back to the originals.
+          returns the redacted text. Redaction is one-way: no mapping is kept, returned or stored.
         </p>
         <h2 id="placeholder">Placeholders</h2>
         <p>
           The default strategy numbers placeholders per label: <code>[EMAIL_1]</code>,{" "}
-          <code>[EMAIL_2]</code>, <code>[PERSON_1]</code>. Brackets make them unambiguous and safe
-          to match again during restore.
+          <code>[EMAIL_2]</code>, <code>[PERSON_1]</code>. Brackets make them unambiguous and easy
+          to spot when reading the redacted output.
         </p>
         <h2 id="fake">Fake values</h2>
         <p>
           Pass <code>strategy=&quot;fake&quot;</code> to swap in realistic surrogates using Faker
-          — new names, emails, IBANs and card numbers. The mapping still reverses the change.
+          — new names, emails, IBANs and card numbers, so the document stays readable.
         </p>
         <h2 id="dedup">Repeated values</h2>
         <p>
           The same <code>(label, value)</code> pair always gets the same replacement, so{" "}
-          <code>John met John</code> becomes <code>[PERSON_1] met [PERSON_1]</code> and the mapping
-          stays small.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: "restore",
-    group: "Concepts",
-    label: "Restore",
-    title: "Restore",
-    subtitle: "Put the originals back, briefly",
-    toc: [
-      { id: "mapping", label: "Mappings" },
-      { id: "cli-mapping", label: "CLI sidecars" },
-    ],
-    body: (
-      <>
-        <p>
-          Restoring is a literal replacement of each replacement string with its original value.
-          Longer keys are applied first so one placeholder can never corrupt another.
-        </p>
-        <h2 id="mapping">Mappings</h2>
-        <p>
-          The API keeps mappings in memory with a 15-minute TTL (<code>MappingStore</code>).{" "}
-          <code>/anonymize</code> returns a <code>mapping_id</code>; pass it to{" "}
-          <code>/restore</code>. Unknown or expired ids return <code>404</code>.
-        </p>
-        <div className="callout">
-          <span>
-            <strong>Fake mode caveat:</strong> a generated surrogate could coincidentally appear
-            elsewhere in the document. Placeholders avoid this entirely; prefer them when
-            round-trip fidelity is critical.
-          </span>
-        </div>
-        <h2 id="cli-mapping">CLI sidecars</h2>
-        <p>
-          The CLI cannot share the API&apos;s in-memory store, so <code>anon anonymize</code> writes{" "}
-          <code>OUT.mapping.json</code> next to the redacted file. Treat it as sensitive: it
-          contains the originals.
+          <code>John met John</code> becomes <code>[PERSON_1] met [PERSON_1]</code>, which keeps
+          the document&apos;s relationships intact.
         </p>
       </>
     ),
@@ -333,11 +287,11 @@ export const SECTIONS: DocSection[] = [
     group: "Interfaces",
     label: "REST API",
     title: "REST API",
-    subtitle: "Four endpoints, JSON in and out",
+    subtitle: "Five endpoints, JSON in and out",
     toc: [
       { id: "endpoints", label: "Endpoints" },
       { id: "anonymize", label: "Anonymize" },
-      { id: "restore-api", label: "Restore" },
+      { id: "files", label: "Files" },
       { id: "cors", label: "CORS" },
     ],
     body: (
@@ -369,12 +323,7 @@ export const SECTIONS: DocSection[] = [
             <tr>
               <td><span className="method post">POST</span></td>
               <td>/anonymize</td>
-              <td>Redact text and return a mapping id.</td>
-            </tr>
-            <tr>
-              <td><span className="method post">POST</span></td>
-              <td>/restore</td>
-              <td>Recover the original from a mapping id.</td>
+              <td>Redact text and return the redacted copy.</td>
             </tr>
           </tbody>
         </table>
@@ -389,8 +338,12 @@ export const SECTIONS: DocSection[] = [
         <CodeBlock label="Request" code={ANON_REQUEST} />
         <CodeBlock label="Response" code={ANON_RESPONSE} />
 
-        <h2 id="restore-api">Restore</h2>
-        <CodeBlock label="Request" code={RESTORE_REQUEST} />
+        <h2 id="files">Files</h2>
+        <p>
+          <code>/detect-file</code> and <code>/anonymize-file</code> accept multipart uploads of{" "}
+          <code>.txt</code> and <code>.pdf</code> (up to 10 MB). With <code>output=pdf</code> the{" "}
+          <code>/anonymize-file</code> streams a redacted PDF back with the PII boxed out in place.
+        </p>
 
         <h2 id="cors">CORS</h2>
         <p>
@@ -505,12 +458,12 @@ export const SECTIONS: DocSection[] = [
         <h2 id="coverage">Coverage</h2>
         <ul>
           <li>Regex formats target US phone, ZIP and date conventions.</li>
-          <li>The REST API accepts text only; PDF extraction lives in the CLI.</li>
-          <li>Fake surrogates can theoretically collide with unrelated text on restore.</li>
+          <li>PDF redaction needs a real text layer; scanned or image-only PDFs are rejected.</li>
+          <li>Fake surrogates could coincidentally match unrelated text elsewhere.</li>
         </ul>
         <h2 id="operations">Operations</h2>
         <ul>
-          <li>Mappings are in-memory with a 900-second TTL; restarting the API drops them.</li>
+          <li>Redaction is one-way; nothing is stored server-side between requests.</li>
           <li>There is no authentication or rate limiting in this build.</li>
           <li>
             Vercel serverless functions cannot host the full API because CPU PyTorch exceeds the

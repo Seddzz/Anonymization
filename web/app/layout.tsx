@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Nemo — PII anonymization docs",
   description:
-    "Local, reversible PII anonymization for English documents. REST API, CLI and Docker.",
+    "Local, one-way PII anonymization for English documents. REST API, CLI and Docker.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

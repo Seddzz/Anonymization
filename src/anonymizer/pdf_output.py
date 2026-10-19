@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 from anonymizer.anonymize import anonymize_text, replacement_table
 from anonymizer.detect import Entity
@@ -14,11 +14,10 @@ _TEXT_COLOR = (1.0, 1.0, 1.0)
 
 @dataclass(frozen=True, slots=True)
 class PdfRedaction:
-    """A redacted PDF plus the text-pipeline artifacts of the same run."""
+    """A redacted PDF plus the redacted text of the same run."""
 
     pdf_bytes: bytes
     redacted_text: str
-    mapping: dict[str, str]
     applied: int
     missed: int
 
@@ -62,14 +61,13 @@ def redact_pdf(
 ) -> PdfRedaction:
     """Box out every entity in the PDF and stamp its replacement token.
 
-    Reuses :func:`anonymizer.anonymize.anonymize_text` so the redacted text and
-    mapping are byte-identical to the normal text pipeline (``/restore`` keeps
-    working against text extracted from the returned PDF).
+    Reuses the same replacement table for the stamps and the redacted text, so
+    both stay identical to the normal text pipeline.
     """
     pages = extract_pdf(path)
     full_text = "".join(page.text for page in pages)
-    redacted, mapping = anonymize_text(full_text, entities, strategy=strategy)
     replacements = replacement_table(entities, strategy=strategy)
+    redacted = anonymize_text(full_text, entities, strategy=strategy, replacements=replacements)
 
     document = fitz.open(path)
     applied = 0
@@ -121,7 +119,6 @@ def redact_pdf(
     return PdfRedaction(
         pdf_bytes=pdf_bytes,
         redacted_text=redacted,
-        mapping=mapping,
         applied=applied,
         missed=missed,
     )

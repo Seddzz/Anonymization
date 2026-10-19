@@ -1,7 +1,7 @@
 """fastapi TestClient-based tests for the REST surface."""
 import io
 
-import fitz  # PyMuPDF
+import pymupdf as fitz
 from fastapi.testclient import TestClient
 
 import anonymizer.api as api
@@ -42,30 +42,18 @@ def test_detect_finds_entities():
     assert "EMAIL" in labels
 
 
-def test_anonymize_then_restore_round_trip():
-    text = "Email a@b.com from John"
-    anonymized = client.post("/anonymize", json={"text": text})
-    assert anonymized.status_code == 200
-    body = anonymized.json()
+def test_anonymize_returns_redacted_only():
+    response = client.post("/anonymize", json={"text": "Email a@b.com"})
+    assert response.status_code == 200
+    body = response.json()
     assert "[EMAIL_1]" in body["redacted"]
-
-    restored = client.post(
-        "/restore",
-        json={"mapping_id": body["mapping_id"], "redacted": body["redacted"]},
-    )
-    assert restored.status_code == 200
-    assert restored.json()["text"] == text
+    assert "mapping_id" not in body
 
 
 def test_anonymize_fake_strategy():
     response = client.post("/anonymize", json={"text": "Email a@b.com", "strategy": "fake"})
     assert response.status_code == 200
     assert "a@b.com" not in response.json()["redacted"]
-
-
-def test_restore_unknown_mapping_id_returns_404():
-    response = client.post("/restore", json={"mapping_id": "map_nope", "redacted": "x"})
-    assert response.status_code == 404
 
 
 def test_anonymize_invalid_strategy_returns_422():
@@ -101,42 +89,27 @@ def test_detect_with_ner_opt_in(monkeypatch):
     assert any(entity["label"] == "PERSON" and entity["source"] == "ner" for entity in entities)
 
 
-def test_anonymize_with_ner_opt_in_round_trip(monkeypatch):
+def test_anonymize_with_ner_opt_in(monkeypatch):
     monkeypatch.setattr(api, "NerDetector", StubNer)
     monkeypatch.setattr(api, "_ner_engine", None)
     monkeypatch.setattr(api, "_ner_detector", None)
 
-    text = "Hello John Doe"
-    anonymized = client.post("/anonymize", json={"text": text, "ner": True})
-    assert anonymized.status_code == 200
-    body = anonymized.json()
-    assert "[PERSON_1]" in body["redacted"]
-
-    restored = client.post(
-        "/restore",
-        json={"mapping_id": body["mapping_id"], "redacted": body["redacted"]},
-    )
-    assert restored.json()["text"] == text
+    response = client.post("/anonymize", json={"text": "Hello John Doe", "ner": True})
+    assert response.status_code == 200
+    assert "[PERSON_1]" in response.json()["redacted"]
 
 
 def _post_file(path: str, name: str, data: bytes, **params: str):
     return client.post(path, files={"file": (name, io.BytesIO(data))}, params=params)
 
 
-def test_anonymize_file_txt_round_trip():
+def test_anonymize_file_txt():
     original = "Contract with John Doe, email john.doe@acme.org dated 03/15/2024."
     response = _post_file("/anonymize-file", "note.txt", original.encode("utf-8"))
     assert response.status_code == 200
     body = response.json()
     assert body["redacted"] != original
     assert "[EMAIL_1]" in body["redacted"]
-
-    restored = client.post(
-        "/restore",
-        json={"mapping_id": body["mapping_id"], "redacted": body["redacted"]},
-    )
-    assert restored.status_code == 200
-    assert restored.json()["text"] == original
 
 
 def test_anonymize_file_pdf_extracts_and_redacts():
@@ -198,8 +171,6 @@ def test_anonymize_file_pdf_output_returns_redacted_pdf():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
     assert response.content.startswith(b"%PDF")
-    mapping_id = response.headers["x-mapping-id"]
-    assert len(mapping_id) > 0
     assert response.headers["x-missed-entities"] == "0"
 
     reopened = fitz.open(stream=response.content, filetype="pdf")
@@ -208,24 +179,11 @@ def test_anonymize_file_pdf_output_returns_redacted_pdf():
     assert "[EMAIL_1]" in redacted_page_text
 
 
-def test_anonymize_file_pdf_output_restores_from_pdf_text_layer():
-    original_email = "john.doe@acme.org"
-    doc = fitz.open()
-    doc.new_page().insert_text((72, 72), f"Email {original_email} for review.")
-    response = _post_file("/anonymize-file", "note.pdf", doc.tobytes(), output="pdf")
+def test_anonymize_file_pdf_output_drops_mapping_headers():
+    pdf = make_pdf("Email a@b.com for review.")
+    response = _post_file("/anonymize-file", "note.pdf", pdf, output="pdf")
     assert response.status_code == 200
-    mapping_id = response.headers["x-mapping-id"]
-
-    redacted_doc = fitz.open(stream=response.content, filetype="pdf")
-    redacted_text = " ".join(page.get_text("text") for page in redacted_doc)
-    assert "[EMAIL_1]" in redacted_text
-
-    restored = client.post(
-        "/restore",
-        json={"mapping_id": mapping_id, "redacted": redacted_text},
-    )
-    assert restored.status_code == 200
-    assert original_email in restored.json()["text"]
+    assert "x-mapping-id" not in response.headers
 
 
 def test_anonymize_file_txt_output_pdf_rejected():

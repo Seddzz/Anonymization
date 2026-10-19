@@ -3,17 +3,17 @@
 </p>
 
 <p align="center">
-  <em>API-first PII anonymization for English documents. Runs locally, reversible by design, usable from REST or CLI.</em>
+  <em>API-first PII anonymization for English documents. Runs locally, one-way redaction, usable from REST or CLI.</em>
 </p>
 
 ---
 
 ## What you get
 
-- **REST API** — FastAPI service with `/detect`, `/anonymize`, `/restore`, `/health` and an interactive Swagger UI at `http://localhost:8000/docs`.
-- **`anon` CLI** — detect, anonymize and restore `.txt` / `.pdf` files straight from your terminal.
+- **REST API** — FastAPI service with `/detect`, `/anonymize`, `/health` and an interactive Swagger UI at `http://localhost:8000/docs`.
+- **`anon` CLI** — detect and anonymize `.txt` / `.pdf` files straight from your terminal.
 - **File workflow** — redact a document to a clean file, then use that file anywhere: paste it into a chat, load it in any agent, share it onward. PII never reaches a model.
-- **Reversible redaction** — PII becomes stable placeholders (`[PERSON_1]`, `[IBAN_1]`) or realistic fakes, and the original can be restored from a short-lived mapping.
+- **Stable redaction** — PII becomes numbered placeholders (`[PERSON_1]`, `[IBAN_1]`) or realistic fakes. Redaction is one-way: redacted text is the only artifact, no mapping is kept or written.
 - **Local-first privacy** — detection runs on your machine; no request ever leaves your infrastructure.
 - **Docs site** — the `web/` folder ships a Next.js docs site with a RAG assistant (deployable on Vercel); the engine and your data stay on your machine.
 
@@ -86,7 +86,7 @@ curl -X POST http://localhost:8000/detect \
   -d '{"text": "Sarah Kellermann transferred EUR 4200 to IBAN DE89 3704 0044 0532 0130 00", "ner": false}'
 ```
 
-Anonymize — get redacted text plus a `mapping_id`:
+Anonymize — get redacted text plus the detected entities:
 
 ```bash
 curl -X POST http://localhost:8000/anonymize \
@@ -97,20 +97,11 @@ curl -X POST http://localhost:8000/anonymize \
 ```json
 {
   "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1]",
-  "mapping_id": "abc123",
   "entities": [...]
 }
 ```
 
-Restore the original before the mapping expires:
-
-```bash
-curl -X POST http://localhost:8000/restore \
-  -H "Content-Type: application/json" \
-  -d '{"mapping_id": "abc123", "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1]"}'
-```
-
-> Mappings live **in memory for 15 minutes (900 s)** — use them before they expire or the API returns `404`.
+Nothing is stored or kept server-side — redaction is one-way.
 
 ### Anonymize a PDF
 
@@ -125,12 +116,10 @@ curl -X POST http://localhost:8000/anonymize-file \
 ```json
 {
   "redacted": "[PERSON_1] transferred [AMOUNT_1] to [IBAN_1] ...",
-  "mapping_id": "abc123",
   "entities": [...]
 }
 ```
 
-- Restore the redacted **text** later via `/restore` with the `mapping_id` (same 15-minute TTL).
 - `/detect-file` works identically for detection only. Plain `.txt` uploads are accepted too, up to **10 MB**.
 - Scanned PDFs without a text layer return `422` — run OCR before sending them.
 
@@ -144,7 +133,7 @@ curl -X POST http://localhost:8000/anonymize-file \
   -o invoice_redacted.pdf
 ```
 
-Every detected value is replaced by a drawn token (`[EMAIL_1]`, `[IBAN_1]`, …) over the exact spot the original occupied — the PII is removed from the content stream, so copy/paste cannot recover it. The response carries `X-Mapping-Id` (use it with `/restore`), `X-Redacted-Entities`, and `X-Missed-Entities` (a rare entity split across a page break or in a decorative font may be skipped — check this header before trusting an anonymized document).
+Every detected value is replaced by a drawn token (`[EMAIL_1]`, `[IBAN_1]`, …) over the exact spot the original occupied — the PII is removed from the content stream, so copy/paste cannot recover it. The response carries `X-Redacted-Entities` and `X-Missed-Entities` (a rare entity split across a page break or in a decorative font may be skipped — check this header before trusting an anonymized document).
 
 Prefer no curl? Run the CLI inside the container against a mounted folder:
 
@@ -152,26 +141,37 @@ Prefer no curl? Run the CLI inside the container against a mounted folder:
 docker compose run --rm -v "${PWD}:/data" api anon anonymize /data/invoice.pdf --strategy placeholder -o /data/invoice_redacted.txt
 ```
 
-The redacted file and its `.mapping.json` sidecar (no server TTL) land back in your current folder.
+The redacted file lands back in your current folder with no extras to manage.
 
 ## CLI — the one terminal home
 
 Run `anon` (or the `nemo` alias) with **no arguments** to open the interactive console:
 
 ```
-█   █  █████  █   █   ███
-██  █  █      ██ ██  █   █
-█ █ █  ████   █ █ █  █   █
-█  ██  █      █   █  █   █
-█   █  █████  █   █   ███
- nemo · 0.1.0 — everything runs on your machine
+██      ██  ██████████  ██      ██    ██████  
+██      ██  ██████████  ██      ██    ██████  
+████    ██  ██          ████  ████  ██      ██
+████    ██  ██          ████  ████  ██      ██
+██  ██  ██  ████████    ██  ██  ██  ██      ██
+██  ██  ██  ████████    ██  ██  ██  ██      ██
+██    ████  ██          ██      ██  ██      ██
+██    ████  ██          ██      ██  ██      ██
+██      ██  ██████████  ██      ██    ██████  
+██      ██  ██████████  ██      ██    ██████  
 
-  1) Anonymize a document    4) Engine quickstart
-  2) Detect entities         5) Exit
-  3) Restore from mapping
+ nemo v0.1.0 · one-way redaction · local
+
+ Available Tools
+   detect:    regex + checksum layers (+ optional NER)
+   anonymize: placeholder | fake strategies
+   inputs:    .txt and .pdf — pdf keeps its original layout
+   engine:    uvicorn anonymizer.api:app --port 8000 (REST)
+
+  1) Anonymize a document    3) Engine quickstart
+  2) Detect entities         4) Exit
 ```
 
-- **Anonymize** walks you through: path → NER? → strategy → mapping? (default **no** — you keep the original) → output name. A PDF input produces a redacted `.pdf` with placeholders stamped in place (layout preserved).
+- **Anonymize** walks you through: path → NER? → strategy → output name. A PDF input produces a redacted `.pdf` with placeholders stamped in place (layout preserved).
 - **Engine quickstart** prints copy-paste startup commands if you also want the REST API.
 - Existing venvs need one `pip install -e . --no-deps` to pick up the `nemo` alias.
 
@@ -181,14 +181,11 @@ Scripted usage (same engine):
 # detect (regex + checksum always on; add --ner for the transformer pass)
 anon detect invoice.pdf
 
-# anonymize: redacted output; PDF in -> PDF out; --mapping / --no-mapping controls the sidecar
-anon anonymize invoice.pdf -o invoice_redacted.pdf --no-mapping
-
-# restore from the sidecar (only if you asked for --mapping)
-anon restore invoice_redacted.txt --mapping invoice_redacted.txt.mapping.json -o invoice_restored.txt
+# anonymize: redacted output; PDF in -> PDF out
+anon anonymize invoice.pdf -o invoice_redacted.pdf
 ```
 
-Keeping the original? Skip the sidecar — no mapping, no expiry, nothing else to manage.
+Redaction is one-way: the redacted file is the only artifact — nothing else to keep, expire or protect.
 
 ### Using redacted files with agents
 
@@ -204,7 +201,7 @@ Three detector layers, deterministic priority on overlap (`checksum > regex > ne
 2. **Checksum-validated detectors** — Luhn (credit cards), IBAN mod-97, SSN: high-precision, near-zero false positives.
 3. **Optional NER** — `dslim/bert-base-NER` via transformers for names, organizations, locations. Off by default because it downloads the model on first use and is capitalization-sensitive (see [`docs/ner-limitations.md`](docs/ner-limitations.md)).
 
-Redaction strategies: `placeholder` (stable `[LABEL_N]` tokens — consistent per value) or `fake` (realistic Faker surrogates that restore to the true original).
+Redaction strategies: `placeholder` (stable `[LABEL_N]` tokens — consistent per value) or `fake` (realistic Faker surrogates for documents you want to stay readable).
 
 ## Tests & evaluation
 
@@ -229,7 +226,6 @@ On the 200-document synthetic benchmark the pipeline scores **F1 = 1.000** for r
 
 **Service architecture**
 
-- Replace the in-memory mapping store with **Redis/PostgreSQL** (encrypted at rest) so mappings survive process restarts and multiple replicas, with configurable TTL.
 - Add **auth** (API keys / JWT) + rate limiting per client before any shared deployment, plus TLS at the ingress.
 - Split the NER pass into a **separate worker/pod**: it holds a large resident model; regex-only requests should not pay for it.
 - Long documents: define **chunking + overlap policy** so NER doesn't miss entities split across chunk boundaries.

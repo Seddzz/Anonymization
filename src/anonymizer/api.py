@@ -1,4 +1,4 @@
-"""FastAPI service exposing detection, anonymization, and restoration."""
+"""FastAPI service exposing detection and anonymization."""
 import os
 import tempfile
 from pathlib import Path
@@ -16,8 +16,6 @@ from anonymizer.engine import DetectionEngine
 from anonymizer.exceptions import ScannedDocumentError
 from anonymizer.extract import extract_pdf
 from anonymizer.pdf_output import redact_pdf
-from anonymizer.restore import restore_text
-from anonymizer.store import MappingStore
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 _UPLOAD_SUFFIXES = (".txt", ".pdf")
@@ -37,7 +35,6 @@ app.add_middleware(
 )
 
 engine = DetectionEngine()
-store = MappingStore()
 
 _ner_detector: NerDetector | None = None
 _ner_engine: DetectionEngine | None = None
@@ -82,17 +79,7 @@ class AnonymizeRequest(BaseModel):
 
 class AnonymizeResponse(BaseModel):
     redacted: str
-    mapping_id: str
     entities: list[EntityOut]
-
-
-class RestoreRequest(BaseModel):
-    mapping_id: str
-    redacted: str
-
-
-class RestoreResponse(BaseModel):
-    text: str
 
 
 class HealthResponse(BaseModel):
@@ -187,9 +174,9 @@ def anonymize_file(
 ) -> Response:
     """Anonymize an uploaded .txt or .pdf document.
 
-    ``output=text`` (default) returns the usual JSON with ``redacted``,
-    ``mapping_id`` and ``entities``. ``output=pdf`` streams a redacted PDF with
-    the PII boxed out in place; the mapping id is carried in ``X-Mapping-Id``.
+    ``output=text`` (default) returns the usual JSON with ``redacted`` and
+    ``entities``. ``output=pdf`` streams a redacted PDF with the PII boxed out
+    in place; counters are carried in ``X-Redacted-Entities``.
     """
     text, temp_path = _read_upload(file)
     try:
@@ -200,22 +187,18 @@ def anonymize_file(
                     status_code=400, detail="PDF output requires a PDF upload."
                 )
             result = redact_pdf(temp_path, entities, strategy=strategy)
-            mapping_id = store.save(result.mapping)
             return Response(
                 content=result.pdf_bytes,
                 media_type="application/pdf",
                 headers={
-                    "X-Mapping-Id": mapping_id,
                     "X-Redacted-Entities": str(result.applied),
                     "X-Missed-Entities": str(result.missed),
                 },
             )
 
-        redacted, mapping = anonymize_text(text, entities, strategy=strategy)
-        mapping_id = store.save(mapping)
+        redacted = anonymize_text(text, entities, strategy=strategy)
         return AnonymizeResponse(
             redacted=redacted,
-            mapping_id=mapping_id,
             entities=[_to_out(entity) for entity in entities],
         )
     finally:
@@ -225,19 +208,10 @@ def anonymize_file(
 
 @app.post("/anonymize", response_model=AnonymizeResponse)
 def anonymize(request: AnonymizeRequest) -> AnonymizeResponse:
+    """Redact PII in text and return the redacted text with the detected entities."""
     entities = _engine_for(request.ner).detect_all(request.text)
-    redacted, mapping = anonymize_text(request.text, entities, strategy=request.strategy)
-    mapping_id = store.save(mapping)
+    redacted = anonymize_text(request.text, entities, strategy=request.strategy)
     return AnonymizeResponse(
         redacted=redacted,
-        mapping_id=mapping_id,
         entities=[_to_out(entity) for entity in entities],
     )
-
-
-@app.post("/restore", response_model=RestoreResponse)
-def restore(request: RestoreRequest) -> RestoreResponse:
-    mapping = store.get(request.mapping_id)
-    if mapping is None:
-        raise HTTPException(status_code=404, detail="mapping not found or expired")
-    return RestoreResponse(text=restore_text(request.redacted, mapping))

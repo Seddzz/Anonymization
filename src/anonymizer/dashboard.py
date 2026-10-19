@@ -7,6 +7,7 @@ import typer
 from anonymizer import __version__, cli
 
 LIME = "\x1b[38;2;200;255;0m"
+LIME_DARK = "\x1b[38;2;130;165;0m"
 DIM = "\x1b[38;2;98;113;120m"
 RESET = "\x1b[0m"
 
@@ -21,7 +22,15 @@ _DOC_SUFFIXES = (".txt", ".pdf")
 
 
 def pixel_banner() -> list[str]:
-    return ["  ".join(_GLYPHS[letter][row] for letter in "NEMO") for row in range(5)]
+    """Big two-by pixels NEMO, mirrored rows for a gradient-like shading."""
+    rows = [
+        "  ".join("".join(char * 2 for char in _GLYPHS[letter][row]) for letter in "NEMO")
+        for row in range(5)
+    ]
+    doubled: list[str] = []
+    for row in rows:
+        doubled.extend([row, row])
+    return doubled
 
 
 def _paint(text: str, color: str = "") -> str:
@@ -60,11 +69,10 @@ def _flow_anonymize() -> None:
         return
     ner = typer.confirm("Use transformer NER? (downloads the model on first use)", default=False)
     strategy = _ask_strategy()
-    sidecar = typer.confirm("Write a mapping sidecar for restoration?", default=False)
     default_out = path.with_name(f"{path.stem}_redacted{path.suffix}")
     output = Path(typer.prompt("Output path", default=str(default_out))).expanduser()
     try:
-        cli.anonymize_document(path, output, strategy, sidecar, cli.engine_for(ner))
+        cli.anonymize_document(path, output, strategy, cli.engine_for(ner))
     except Exception as exc:
         typer.echo(_paint(f"  ✗ {exc}", LIME))
 
@@ -75,21 +83,6 @@ def _flow_detect() -> None:
         return
     ner = typer.confirm("Use transformer NER? (downloads the model on first use)", default=False)
     cli.print_entities(cli.engine_for(ner).detect_all(cli.read_text(path)))
-
-
-def _flow_restore() -> None:
-    redacted = _ask_path("Redacted document")
-    if redacted is None:
-        return
-    mapping = _ask_path("Mapping sidecar path", suffixes=(".json",))
-    if mapping is None:
-        return
-    default_out = redacted.with_name(f"{redacted.stem}_restored{redacted.suffix}")
-    output = Path(typer.prompt("Output path", default=str(default_out))).expanduser()
-    try:
-        cli.restore(redacted, mapping=mapping, output=output)
-    except Exception as exc:
-        typer.echo(_paint(f"  ✗ {exc}", LIME))
 
 
 def _guide_engine() -> None:
@@ -108,27 +101,33 @@ def _guide_engine() -> None:
 _HANDLERS = {
     "1": lambda: (_header("Anonymize a document"), _flow_anonymize()),
     "2": lambda: (_header("Detect entities"), _flow_detect()),
-    "3": lambda: (_header("Restore from mapping"), _flow_restore()),
-    "4": _guide_engine,
+    "3": _guide_engine,
 }
 
 
 def run_console() -> None:
-    for row in pixel_banner():
-        typer.echo(_paint(row, LIME))
-    typer.echo(_paint(f" nemo · {__version__} — everything runs on your machine", DIM))
+    shading = (LIME, LIME_DARK)
+    for index, row in enumerate(pixel_banner()):
+        typer.echo(_paint(row, shading[index % 2]))
+    typer.echo("")
+    typer.echo(_paint(f" nemo v{__version__}", LIME) + _paint(" · one-way redaction · local", DIM))
+    typer.echo("")
+    typer.echo(_paint(" Available Tools", DIM))
+    typer.echo(_paint("   detect:    ", DIM) + "regex + checksum layers (+ optional NER)")
+    typer.echo(_paint("   anonymize: ", DIM) + "placeholder | fake strategies")
+    typer.echo(_paint("   inputs:    ", DIM) + ".txt and .pdf — pdf keeps its original layout")
+    typer.echo(_paint("   engine:    ", DIM) + "uvicorn anonymizer.api:app --port 8000 (REST)")
 
     while True:
         typer.echo("")
-        typer.echo(_paint("  1) Anonymize a document    4) Engine quickstart", DIM))
-        typer.echo(_paint("  2) Detect entities         5) Exit", DIM))
-        typer.echo(_paint("  3) Restore from mapping", DIM))
+        typer.echo(_paint("  1) Anonymize a document    3) Engine quickstart", DIM))
+        typer.echo(_paint("  2) Detect entities         4) Exit", DIM))
         try:
             choice = typer.prompt("nemo ›").strip()
         except (KeyboardInterrupt, EOFError):
             typer.echo("")
             break
-        if choice in ("5", "q", "quit", "exit"):
+        if choice in ("4", "q", "quit", "exit"):
             break
         handler = _HANDLERS.get(choice)
         if handler is None:

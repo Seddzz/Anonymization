@@ -1,5 +1,4 @@
 """Command-line interface for the anonymizer."""
-import json
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -13,9 +12,8 @@ from anonymizer.detectors import ALL_CHECKSUM_DETECTORS, ALL_REGEX_DETECTORS, Ne
 from anonymizer.engine import DetectionEngine
 from anonymizer.extract import extract_pdf
 from anonymizer.pdf_output import redact_pdf
-from anonymizer.restore import restore_text
 
-app = typer.Typer(help="Anonymize English documents: detect, redact, and restore.")
+app = typer.Typer(help="Anonymize English documents: detect and redact.")
 
 engine = DetectionEngine()
 
@@ -73,7 +71,6 @@ def anonymize_document(
     path: Path,
     output: Path,
     strategy: Strategy,
-    sidecar: bool,
     engine_override: DetectionEngine | None = None,
 ) -> None:
     """Redact ``path`` into ``output`` (PDF in -> PDF out, txt stays text)."""
@@ -91,16 +88,10 @@ def anonymize_document(
             typer.echo(
                 "Some entities could not be located on the page layout; review the output."
             )
-        mapping = result.mapping
     else:
-        redacted, mapping = anonymize_text(text, entities, strategy=strategy.value)
+        redacted = anonymize_text(text, entities, strategy=strategy.value)
         output.write_text(redacted, encoding="utf-8")
         typer.echo(f"Redacted {len(entities)} entities -> {output}")
-
-    if sidecar:
-        mapping_path = output.with_suffix(output.suffix + ".mapping.json")
-        mapping_path.write_text(json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
-        typer.echo(f"Mapping -> {mapping_path} (sensitive: contains original values)")
 
 
 @app.command()
@@ -121,38 +112,12 @@ def anonymize(
     strategy: Annotated[
         Strategy, typer.Option("--strategy", help="Redaction strategy.")
     ] = Strategy.placeholder,
-    sidecar: Annotated[
-        bool,
-        typer.Option(
-            "--mapping/--no-mapping",
-            help="Write the mapping sidecar for later restoration.",
-        ),
-    ] = True,
     ner: Annotated[
         bool, typer.Option("--ner/--no-ner", help="Add the transformer NER pass.")
     ] = False,
 ) -> None:
-    """Redact a document and optionally write a mapping sidecar next to the output."""
-    anonymize_document(path, output, strategy, sidecar, engine_for(ner))
-
-
-@app.command()
-def restore(
-    path: Annotated[Path, typer.Argument(help="Redacted file to restore.")],
-    mapping: Annotated[Path, typer.Option("--mapping", help="Mapping sidecar (.json).")],
-    output: Annotated[
-        Path | None, typer.Option("-o", "--output", help="Restored output.")
-    ] = None,
-) -> None:
-    """Restore original text from a redacted file and its mapping."""
-    redacted = path.read_text(encoding="utf-8")
-    mapping_dict = json.loads(mapping.read_text(encoding="utf-8"))
-    restored = restore_text(redacted, mapping_dict)
-    if output is None:
-        typer.echo(restored)
-    else:
-        output.write_text(restored, encoding="utf-8")
-        typer.echo(f"Restored -> {output}")
+    """Redact a document into a clean output file."""
+    anonymize_document(path, output, strategy, engine_for(ner))
 
 
 @app.command()
