@@ -11,26 +11,75 @@ LIME_DARK = "\x1b[38;2;130;165;0m"
 DIM = "\x1b[38;2;98;113;120m"
 RESET = "\x1b[0m"
 
+_GRADIENT_TOP = (224, 255, 92)
+_GRADIENT_BOTTOM = (104, 158, 0)
+
 _GLYPHS = {
-    "N": ["█   █", "██  █", "█ █ █", "█  ██", "█   █"],
-    "E": ["█████", "█    ", "████ ", "█    ", "█████"],
-    "M": ["█   █", "██ ██", "█ █ █", "█   █", "█   █"],
-    "O": [" ███ ", "█   █", "█   █", "█   █", " ███ "],
+    "N": [
+        "█   █",
+        "██  █",
+        "██  █",
+        "█ █ █",
+        "█  ██",
+        "█  ██",
+        "█   █",
+    ],
+    "E": [
+        "█████",
+        "█    ",
+        "█    ",
+        "████ ",
+        "█    ",
+        "█    ",
+        "█████",
+    ],
+    "M": [
+        "█   █",
+        "██ ██",
+        "█ █ █",
+        "█ █ █",
+        "█   █",
+        "█   █",
+        "█   █",
+    ],
+    "O": [
+        " ███ ",
+        "█   █",
+        "█   █",
+        "█   █",
+        "█   █",
+        "█   █",
+        " ███ ",
+    ],
 }
+
+_TOOLS = (
+    ("detect", "anon detect <file> [--ner]"),
+    ("anonymize", "anon anonymize <in> -o <out> [--strategy fake]"),
+    ("inputs", ".txt and .pdf — pdf keeps its original layout"),
+    ("engine", "uvicorn anonymizer.api:app --port 8000 → /docs"),
+)
 
 _DOC_SUFFIXES = (".txt", ".pdf")
 
 
 def pixel_banner() -> list[str]:
-    """Big two-by pixels NEMO, mirrored rows for a gradient-like shading."""
+    """Hermes-style big pixel NEMO: fine glyphs, doubled rows for shading."""
     rows = [
-        "  ".join("".join(char * 2 for char in _GLYPHS[letter][row]) for letter in "NEMO")
-        for row in range(5)
+        "  ".join("".join(char * 2 for char in _GLYPHS[letter][glyph_row]) for letter in "NEMO")
+        for glyph_row in range(7)
     ]
     doubled: list[str] = []
     for row in rows:
         doubled.extend([row, row])
     return doubled
+
+
+def _shade(fraction: float) -> str:
+    red = round(_GRADIENT_TOP[0] + (_GRADIENT_BOTTOM[0] - _GRADIENT_TOP[0]) * fraction)
+    green = round(_GRADIENT_TOP[1] + (_GRADIENT_BOTTOM[1] - _GRADIENT_TOP[1]) * fraction)
+    blue = round(_GRADIENT_TOP[2] + (_GRADIENT_BOTTOM[2] - _GRADIENT_TOP[2]) * fraction)
+    return f"\x1b[38;2;{red};{green};{blue}m"
 
 
 def _paint(text: str, color: str = "") -> str:
@@ -106,17 +155,15 @@ _HANDLERS = {
 
 
 def run_console() -> None:
-    shading = (LIME, LIME_DARK)
-    for index, row in enumerate(pixel_banner()):
-        typer.echo(_paint(row, shading[index % 2]))
+    if not sys.stdout.isatty() and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    rows = pixel_banner()
+    steps = len(rows) - 1
+    for index, row in enumerate(rows):
+        typer.echo(_paint(row, _shade(index / steps)))
     typer.echo("")
-    typer.echo(_paint(f" nemo v{__version__}", LIME) + _paint(" · one-way redaction · local", DIM))
+    _ribbon_panel()
     typer.echo("")
-    typer.echo(_paint(" Available Tools", DIM))
-    typer.echo(_paint("   detect:    ", DIM) + "regex + checksum layers (+ optional NER)")
-    typer.echo(_paint("   anonymize: ", DIM) + "placeholder | fake strategies")
-    typer.echo(_paint("   inputs:    ", DIM) + ".txt and .pdf — pdf keeps its original layout")
-    typer.echo(_paint("   engine:    ", DIM) + "uvicorn anonymizer.api:app --port 8000 (REST)")
 
     while True:
         typer.echo("")
@@ -134,3 +181,25 @@ def run_console() -> None:
             typer.echo(_paint(f"  ✗ Unknown option '{choice}'", LIME))
         else:
             handler()
+
+
+def _ribbon_panel() -> None:
+    """Hermes-style ribbon + Available Tools list."""
+    version_text = f"nemo v{__version__}"
+    tail_text = " · one-way redaction · local"
+    plain_length = len(version_text) + len(tail_text) + 2
+    padding = max(0, 74 - plain_length)
+    left, right = padding // 2 + 1, padding - padding // 2 + 1
+    dashes = "─"
+    typer.echo(
+        _paint(dashes * left, LIME_DARK)
+        + " "
+        + _paint(version_text, LIME)
+        + _paint(tail_text, DIM)
+        + " "
+        + _paint(dashes * right, LIME_DARK)
+    )
+    typer.echo("")
+    typer.echo(_paint(" Available Tools", DIM))
+    for label, value in _TOOLS:
+        typer.echo(_paint(f"   {label + ':':<11}", DIM) + _paint(value, LIME))

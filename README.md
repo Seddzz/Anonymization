@@ -148,28 +148,34 @@ The redacted file lands back in your current folder with no extras to manage.
 Run `anon` (or the `nemo` alias) with **no arguments** to open the interactive console:
 
 ```
-██      ██  ██████████  ██      ██    ██████  
-██      ██  ██████████  ██      ██    ██████  
+██      ██  ██████████  ██      ██    ██████
+██      ██  ██████████  ██      ██    ██████
 ████    ██  ██          ████  ████  ██      ██
 ████    ██  ██          ████  ████  ██      ██
+████    ██  ██          ██  ██  ██  ██      ██
+████    ██  ██          ██  ██  ██  ██      ██
 ██  ██  ██  ████████    ██  ██  ██  ██      ██
 ██  ██  ██  ████████    ██  ██  ██  ██      ██
 ██    ████  ██          ██      ██  ██      ██
 ██    ████  ██          ██      ██  ██      ██
-██      ██  ██████████  ██      ██    ██████  
-██      ██  ██████████  ██      ██    ██████  
+██    ████  ██          ██      ██  ██      ██
+██    ████  ██          ██      ██  ██      ██
+██      ██  ██████████  ██      ██    ██████
+██      ██  ██████████  ██      ██    ██████
 
- nemo v0.1.0 · one-way redaction · local
+───────────────── nemo v0.1.0 · one-way redaction · local ──────────────────
 
  Available Tools
-   detect:    regex + checksum layers (+ optional NER)
-   anonymize: placeholder | fake strategies
+   detect:    anon detect <file> [--ner]
+   anonymize: anon anonymize <in> -o <out> [--strategy fake]
    inputs:    .txt and .pdf — pdf keeps its original layout
-   engine:    uvicorn anonymizer.api:app --port 8000 (REST)
+   engine:    uvicorn anonymizer.api:app --port 8000 → /docs
 
   1) Anonymize a document    3) Engine quickstart
   2) Detect entities         4) Exit
 ```
+
+In a real terminal the glyph rows shade through a lime gradient (Hermes-style) and the tool names are lime-bright.
 
 - **Anonymize** walks you through: path → NER? → strategy → output name. A PDF input produces a redacted `.pdf` with placeholders stamped in place (layout preserved).
 - **Engine quickstart** prints copy-paste startup commands if you also want the REST API.
