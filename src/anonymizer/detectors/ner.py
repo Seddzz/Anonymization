@@ -1,4 +1,5 @@
 from transformers import AutoModelForTokenClassification, AutoTokenizer, pipeline
+from transformers.utils import logging
 
 from anonymizer.detect import Entity
 
@@ -11,6 +12,8 @@ LABEL_MAP = {
 
 class NerDetector:
     def __init__(self, model_name:str = "dslim/bert-base-NER", confidence_threshold: float = 0.5,):
+        logging.set_verbosity_error()
+        logging.disable_progress_bar()
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForTokenClassification.from_pretrained(model_name)
         self.nlp = pipeline(

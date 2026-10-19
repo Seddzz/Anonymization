@@ -8,8 +8,8 @@ from anonymizer.anonymize import anonymize_text, replacement_table
 from anonymizer.detect import Entity
 from anonymizer.extract import extract_pdf
 
-_FILL = (0.055, 0.086, 0.106)
-_TEXT_COLOR = (1.0, 1.0, 1.0)
+_FILL = (1.0, 1.0, 1.0)
+_TEXT_COLOR = (0.055, 0.086, 0.106)
 
 
 @dataclass(frozen=True, slots=True)
